@@ -57,3 +57,12 @@ logs/
 
 # Docker
 .dockerignore
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Databases
+*.db
+*.sqlite3
