@@ -40,5 +40,32 @@ Press `Ctrl+C` in the terminal where Docker Compose is running, and then run:
 docker-compose down
 ```
 
+## Phase 2: Database Layer
+
+This phase introduces the foundational database layer using PostgreSQL, SQLAlchemy, and Alembic.
+
+### Database Architecture
+- **SQLAlchemy Engine & Session**: Configured in `backend/database.py`.
+- **Alembic**: Used for database schema migrations.
+- **Pydantic**: Used for API response serialization (`backend/schemas.py`).
+
+### Models and Relationships
+- **PullRequest**: Represents a PR being audited. Has a one-to-many relationship with `AuditRun`.
+- **AuditRun**: Represents a single execution of Sceptic on a PR. Has a one-to-many relationship with `AgentFinding`.
+- **AgentFinding**: Represents an individual finding from an agent (e.g., Fact-Checker).
+
+### Alembic Migration Process
+To run database migrations manually:
+1. Run `docker compose exec backend bash`
+2. Run `alembic upgrade head`
+
+### How to Verify the Database
+- Open your browser to `http://localhost:8000/audits`. You should see an empty JSON array `[]` initially, indicating that the `AuditRun` table was queried successfully.
+
+### Testing
+To run the automated tests for the database schema and API endpoints:
+1. Run `docker compose exec backend bash`
+2. Run `pytest test_api.py`
+
 ### Note on Future Phases
-Agents, auditing, Celery workers, CLI, CI/CD, and database models are **NOT** implemented in this phase and will be added in Phase 2.
+Agents, auditing logic, Celery workers, CLI, CI/CD, and the React dashboard are **NOT** implemented in this phase and will be added in Phase 3+.
