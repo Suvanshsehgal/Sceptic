@@ -1,0 +1,41 @@
+rules:
+  - id: python-command-injection
+    patterns:
+      - pattern-either:
+          - pattern: os.system(...)
+          - pattern: os.popen(...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.run(..., shell=True, ...)
+    message: "Detected potential command injection or dangerous shell execution."
+    languages: [python]
+    severity: ERROR
+
+  - id: python-dangerous-eval
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: exec(...)
+    message: "Detected use of dynamic code evaluation (eval or exec)."
+    languages: [python]
+    severity: ERROR
+
+  - id: python-insecure-deserialization
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads(...)
+          - pattern: pickle.load(...)
+          - pattern: yaml.load(..., Loader=yaml.Loader)
+    message: "Insecure deserialization using pickle or unsafe YAML loader."
+    languages: [python]
+    severity: ERROR
+
+  - id: python-hardcoded-secret
+    patterns:
+      - pattern: $X = "..."
+      - metavariable-regex:
+          metavariable: $X
+          regex: (?i)(password|secret|token|api_key|auth)
+    message: "Possible hardcoded credential or secret detected."
+    languages: [python]
+    severity: WARNING
