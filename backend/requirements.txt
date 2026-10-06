@@ -6,3 +6,9 @@ sqlalchemy
 alembic
 pytest
 httpx
+celery
+redis
+groq
+bandit
+semgrep
+crewai

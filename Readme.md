@@ -69,3 +69,181 @@ To run the automated tests for the database schema and API endpoints:
 
 ### Note on Future Phases
 Agents, auditing logic, Celery workers, CLI, CI/CD, and the React dashboard are **NOT** implemented in this phase and will be added in Phase 3+.
+
+## Phase 3: Fact-Checker Agent
+
+This phase implements the deterministic API verification tool and its minimal CrewAI Agent wrapper. 
+
+### Fact-Checker Architecture
+- **Tool (`worker/fact_checker.py`)**: Uses Python's `ast` module to statically parse source code. It resolves module names, attempts to dynamically load them via `importlib`, and verifies function existence and signature parameters using `dir()` and `inspect.signature()`.
+- **CrewAI Wrapper (`worker/crewai_wrapper.py`)**: Encapsulates the deterministic tool inside a CrewAI Agent. The LLM does **not** guess API correctness; it strictly delegates to the tool and formats the structured findings.
+
+### Finding Status Types
+- **VALID**: The API call and parameters were confirmed to exist in the environment.
+- **INVALID**: The function does not exist, or required/keyword parameters mismatch the real signature.
+- **UNRESOLVED**: The code is too dynamic to resolve statically (e.g., calling a method on an unknown object variable).
+
+### Testing the Fact-Checker
+You can run the pure AST verification unit tests without needing an LLM key:
+```bash
+pytest worker/test_fact_checker.py
+```
+
+### Running the Standalone CrewAI Test
+To see the Fact-Checker Agent in action (requires an LLM API Key like `OPENAI_API_KEY` in your `.env`):
+```bash
+python worker/test_crewai.py
+```
+
+## Phase 4: Blind Tester + Security Guard Agents
+
+Phase 4 introduces two independent verification agents: the specification-driven **Blind Tester** and the hybrid deterministic/LLM **Security Guard**.
+
+---
+
+### Part A: Blind Tester Agent
+
+#### Purpose
+The Blind Tester generates unbiased, specification-based unit tests to verify whether code fulfills its functional requirements.
+
+#### Information-Isolation Principle (Architectural Requirement)
+The test-generation LLM **must never see the implementation** it is testing.
+- **Allowed Inputs**: Function name, docstring, specification / PR description, approved specification metadata.
+- **Prohibited Inputs**: Function body / implementation code, existing test suites, findings from other agents (Fact-Checker, Security Guard).
+- **Enforcement**: Validated in code via `SpecificationMetadata.validate_isolation()`. Passing prohibited fields raises a `ValueError`.
+
+#### Test Generation
+- Powered by **Groq LLM** (`llama-3.3-70b-versatile`).
+- Generates executable `pytest` test suites covering normal behavior, boundary/edge conditions, and invalid inputs based strictly on docstrings and specifications.
+- Includes deterministic fallback generation when offline or no API key is set.
+
+#### Test Execution & Finding Generation
+- Tests run in an isolated execution sandbox against the real implementation.
+- Captures test results (`passed`, `failed`, `errors`).
+- Failures are transformed into structured findings conforming to the `AgentFinding` schema (`severity: HIGH`, failure description, line/test name, traceback evidence).
+
+#### Limitations
+- Functions requiring external state (databases, remote network APIs) require mocked fixtures or explicit environmental preconditions in their specifications.
+
+---
+
+### Part B: Security Guard Agent
+
+#### Hybrid Architecture
+```
+Target Code
+    │
+┌───┴───────────┐
+│               │
+▼               ▼
+Semgrep       Bandit
+│               │
+└───┬───────────┘
+    ▼
+Normalized Security Findings
+    ▼
+Groq Contextual Analysis (Validation & Exploitability)
+    ▼
+Final Structured Security Findings
+```
+
+#### Roles of Deterministic Scanners
+- **Semgrep**: Static analysis enforcing AST/pattern rules for dangerous shell execution (`subprocess`, `os.system`), dangerous `eval`/`exec`, insecure deserialization (`pickle`), and hardcoded secrets.
+- **Bandit**: Dedicated Python AST security scanner detecting common vulnerability patterns (B105/B106 secrets, B307 eval, etc.).
+
+#### Result Normalization & Evidence Preservation
+- Scanner outputs are mapped to the unified `AgentFinding` database schema (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`).
+- **Original scanner evidence** (rule IDs, line numbers, code snippets) is **never discarded or fabricated**.
+
+#### Groq Contextual Analysis
+- Groq evaluates the scanner findings in the context of the code to determine true positives vs. false positives, explain exploit scenarios, and suggest remediations.
+- **Graceful Fallback**: If the LLM is unavailable or fails, deterministic scanner evidence is preserved untouched.
+
+#### Limitations
+- Static analysis cannot detect runtime-only business logic vulnerabilities or vulnerabilities in uninspected dynamic dependencies.
+
+---
+
+### Running Phase 4 Tests
+```bash
+# Run Blind Tester unit tests & information isolation validation
+pytest worker/test_blind_tester.py -v
+
+# Run Security Guard static scanner and contextual analyzer tests
+pytest worker/test_security_guard.py -v
+
+# Run standalone CrewAI agent wrapper tests
+pytest worker/test_phase4_crewai.py -v
+```
+
+## Phase 5: Agent Orchestration and End-to-End Audit Pipeline
+
+Phase 5 integrates the three independent verification agents into an asynchronous, production-ready audit pipeline.
+
+```
+Webhook (GitHub PR Event)
+         │
+         ▼
+FastAPI (/webhook) ───[Idempotency Check]───► PostgreSQL (PullRequest, AuditRun)
+         │
+         ▼
+   Celery Task (Queue via Redis)
+         │
+         ▼
+Audit Orchestrator (Fan-Out / Fan-In)
+    ┌────┴─────────────────────────────┐
+    ▼                                  ▼                                  ▼
+Fact-Checker Agent           Blind-Tester Agent (ISOLATED)     Security-Guard Agent
+(AST, inspect, dir)          (Docstring/Spec ONLY)             (Semgrep, Bandit, Groq)
+    │                                  │                                  │
+    └──────────────────────────────────┼──────────────────────────────────┘
+                                       ▼
+                              Report Synthesizer (Fan-In)
+                                       │
+                                       ▼
+                             Deterministic Trust Score
+                                       │
+                                       ▼
+                       PostgreSQL (Findings, Final Score)
+```
+
+### 1. Webhook Flow & Idempotency
+- **Endpoint**: `POST /webhook`
+- Accepts GitHub pull request events or standard JSON payload (`repository`, `pr_number`, `commit_sha`, `branch_name`).
+- **Idempotency**: Repeated webhooks for the exact same `commit_sha` and `pr_number` return `HTTP 200 (ALREADY_EXISTS)` without triggering duplicate audits.
+- Creates `PullRequest` and `AuditRun` (`status: PENDING`), then immediately enqueues the Celery background task and returns `HTTP 202 ACCEPTED`.
+
+### 2. Celery & Redis Role
+- **Broker & Backend**: Redis (`REDIS_URL`).
+- **Task**: `execute_audit_pipeline(audit_run_id, payload)`
+- Transitions `AuditRun` state: `PENDING` -> `RUNNING` -> `COMPLETED` (or `FAILED` on unhandled error, preventing zombie states).
+- Persists all `AgentFinding` records and saves the computed `trust_score`, `summary`, and `recommendation` to PostgreSQL.
+
+### 3. CrewAI Fan-Out / Fan-In Orchestration
+- **Fan-Out**: Fact-Checker, Blind-Tester, and Security-Guard execute independently in parallel.
+- **Information Isolation**: Blind Tester receives *only* specification metadata (function name, docstring, PR description). The implementation code is isolated to the sandbox executor and never enters the LLM generation context.
+- **Fault-Tolerant Execution**: A failure in one agent (e.g., scanner error) records a diagnostic finding while permitting the remaining agents to complete.
+
+### 4. Deterministic Trust Score Methodology
+The Trust Score evaluates verification evidence through an objective, deterministic formula:
+- **Starting Score**: 100 points
+- **Deductions**:
+  - `CRITICAL` severity: **-35 points** (Remote code execution, command injection)
+  - `HIGH` severity: **-20 points** (Specification failure, non-existent API)
+  - `MEDIUM` severity: **-10 points** (Invalid keyword parameter, security warning)
+  - `LOW` severity: **-3 points** (Informational security notice)
+  - `UNRESOLVED / ERROR`: **-5 points** (Dynamic ambiguity or scanner execution error)
+- **Score Range**: Clamped to `[0, 100]`.
+- **Recommendation Thresholds**:
+  - `85 - 100`: **APPROVE** (High confidence, requirements fulfilled)
+  - `65 - 84`: **REQUEST_CHANGES** (Minor issues or warnings present)
+  - `0 - 64`: **BLOCK** (Critical vulnerabilities or specification violations)
+
+### 5. Running Phase 5 Tests
+```bash
+# Run Phase 5 orchestration, webhook, Celery, and end-to-end flow tests:
+pytest worker/test_phase5_orchestration.py -v
+
+# Run the complete test suite across all phases (37 tests):
+pytest backend/test_api.py worker/test_fact_checker.py worker/test_blind_tester.py worker/test_security_guard.py worker/test_phase4_crewai.py worker/test_phase5_orchestration.py -v
+```

@@ -20,6 +20,9 @@ class AgentFindingResponse(AgentFindingBase):
 
 class AuditRunBase(BaseModel):
     status: str
+    trust_score: Optional[int] = None
+    summary: Optional[str] = None
+    recommendation: Optional[str] = None
     
 class AuditRunResponse(AuditRunBase):
     id: int
