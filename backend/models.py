@@ -167,6 +167,12 @@ class Project(Base):
         cascade="all, delete-orphan",
         order_by="desc(FeatureAnalysis.created_at)"
     )
+    deployments = relationship(
+        "Deployment",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="desc(Deployment.created_at)"
+    )
 
     __table_args__ = (
         Index("ix_projects_user_name", "user_id", "name"),
@@ -333,4 +339,184 @@ class AgentFinding(Base):
 
     __table_args__ = (
         Index("ix_agent_findings_audit_agent", "audit_run_id", "agent_name"),
+    )
+
+
+# ========================================================
+# 4. DEPLOYMENT & OBSERVABILITY STATE MODELS (PHASE 10)
+# ========================================================
+
+class Deployment(Base):
+    """
+    Represents a discrete application deployment for a Project repository.
+    Serves as the root entity for post-deployment observability, drift detection, and recovery.
+    """
+    __tablename__ = "deployments"
+
+    id = Column(GUID(), primary_key=True, default=generate_uuid, index=True)
+    project_id = Column(
+        GUID(),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    commit_sha = Column(String(100), nullable=False, index=True)
+    image_name = Column(String(255), nullable=False)
+    image_tag = Column(String(100), nullable=False)
+    image_digest = Column(String(255), nullable=True)
+    environment = Column(String(50), nullable=False, default="production", index=True)
+    version = Column(String(100), nullable=True)
+    status = Column(String(50), nullable=False, default="PENDING", index=True)
+    deployed_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    previous_deployment_id = Column(
+        GUID(),
+        ForeignKey("deployments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    # Relationships
+    project = relationship("Project", back_populates="deployments")
+    previous_deployment = relationship(
+        "Deployment",
+        remote_side=[id],
+        foreign_keys=[previous_deployment_id],
+        backref="subsequent_deployments"
+    )
+    telemetry_snapshots = relationship(
+        "TelemetrySnapshot",
+        back_populates="deployment",
+        cascade="all, delete-orphan",
+        order_by="desc(TelemetrySnapshot.timestamp)"
+    )
+    drift_events = relationship(
+        "DriftEvent",
+        back_populates="deployment",
+        cascade="all, delete-orphan",
+        order_by="desc(DriftEvent.detected_at)"
+    )
+    rollback_records = relationship(
+        "RollbackRecord",
+        foreign_keys="[RollbackRecord.deployment_id]",
+        back_populates="deployment",
+        cascade="all, delete-orphan",
+        order_by="desc(RollbackRecord.created_at)"
+    )
+
+    __table_args__ = (
+        Index("ix_deployments_project_status", "project_id", "status"),
+        Index("ix_deployments_project_env", "project_id", "environment"),
+    )
+
+
+class TelemetrySnapshot(Base):
+    """
+    Persists structured observations of deployed application health and performance.
+    Consumed by the future Pipeline Watchdog agent.
+    """
+    __tablename__ = "telemetry_snapshots"
+
+    id = Column(GUID(), primary_key=True, default=generate_uuid, index=True)
+    deployment_id = Column(
+        GUID(),
+        ForeignKey("deployments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    health_status = Column(String(50), nullable=False, default="healthy")
+    request_count = Column(Integer, nullable=True)
+    error_count = Column(Integer, nullable=True)
+    error_rate = Column(Float, nullable=True)
+    latency_avg = Column(Float, nullable=True)
+    latency_p95 = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # Relationships
+    deployment = relationship("Deployment", back_populates="telemetry_snapshots")
+
+    __table_args__ = (
+        Index("ix_telemetry_deployment_timestamp", "deployment_id", "timestamp"),
+        CheckConstraint("request_count IS NULL OR request_count >= 0", name="chk_telemetry_request_count"),
+        CheckConstraint("error_count IS NULL OR error_count >= 0", name="chk_telemetry_error_count"),
+        CheckConstraint("error_rate IS NULL OR (error_rate >= 0.0 AND error_rate <= 1.0)", name="chk_telemetry_error_rate"),
+        CheckConstraint("latency_avg IS NULL OR latency_avg >= 0.0", name="chk_telemetry_latency_avg"),
+        CheckConstraint("latency_p95 IS NULL OR latency_p95 >= 0.0", name="chk_telemetry_latency_p95"),
+    )
+
+
+class DriftEvent(Base):
+    """
+    Captures configuration, image, or environmental deviations between desired and observed state.
+    Consumed by the future Gatekeeper agent.
+    """
+    __tablename__ = "drift_events"
+
+    id = Column(GUID(), primary_key=True, default=generate_uuid, index=True)
+    deployment_id = Column(
+        GUID(),
+        ForeignKey("deployments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    drift_type = Column(String(50), nullable=False, index=True)
+    expected_value = Column(Text, nullable=False)
+    actual_value = Column(Text, nullable=False)
+    severity = Column(String(50), default="MEDIUM", nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    detected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # Relationships
+    deployment = relationship("Deployment", back_populates="drift_events")
+
+    __table_args__ = (
+        Index("ix_drift_events_deployment_detected", "deployment_id", "detected_at"),
+    )
+
+
+class RollbackRecord(Base):
+    """
+    Records recovery and rollback operations targeting a previous known-good deployment.
+    Consumed by the future Rollback agent.
+    """
+    __tablename__ = "rollback_records"
+
+    id = Column(GUID(), primary_key=True, default=generate_uuid, index=True)
+    deployment_id = Column(
+        GUID(),
+        ForeignKey("deployments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    target_deployment_id = Column(
+        GUID(),
+        ForeignKey("deployments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    reason = Column(Text, nullable=False)
+    trigger_source = Column(String(100), default="MANUAL", nullable=False)
+    status = Column(String(50), default="PENDING", nullable=False, index=True)
+    safety_check_result = Column(JSON, nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # Relationships
+    deployment = relationship("Deployment", foreign_keys=[deployment_id], back_populates="rollback_records")
+    target_deployment = relationship("Deployment", foreign_keys=[target_deployment_id])
+
+    __table_args__ = (
+        Index("ix_rollback_records_deployment_created", "deployment_id", "created_at"),
     )
