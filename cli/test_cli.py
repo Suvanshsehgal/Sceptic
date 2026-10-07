@@ -37,7 +37,7 @@ def test_cli_audit_help():
     """Verify sceptic audit --help displays audit command arguments and flags."""
     result = runner.invoke(app, ["audit", "--help"])
     assert result.exit_code == 0
-    assert "Path to Python file or directory to audit" in result.stdout
+    assert "Path to source file or directory to audit" in result.stdout
     assert "--verbose" in result.stdout
     assert "--json" in result.stdout
 
@@ -50,19 +50,19 @@ def test_cli_audit_nonexistent_path():
 
 
 def test_cli_audit_invalid_file_extension(sample_invalid_extension):
-    """Verify audit returns EXIT_CLI_ERROR (2) when file is not a python file."""
+    """Verify audit returns EXIT_CLI_ERROR (2) when file is not a supported source file."""
     result = runner.invoke(app, ["audit", sample_invalid_extension])
     assert result.exit_code == EXIT_CLI_ERROR
-    assert "Validation Error:" in result.stdout or "must be a Python source file" in result.stdout
+    assert "Validation Error:" in result.stdout or "Unsupported file type" in result.stdout
 
 
 def test_cli_audit_empty_directory(tmp_path):
-    """Verify audit returns EXIT_CLI_ERROR (2) when directory contains no python files."""
+    """Verify audit returns EXIT_CLI_ERROR (2) when directory contains no supported files."""
     empty_dir = tmp_path / "empty_dir"
     empty_dir.mkdir()
     result = runner.invoke(app, ["audit", str(empty_dir)])
     assert result.exit_code == EXIT_CLI_ERROR
-    assert "No Python source files found" in result.stdout
+    assert "No supported source files found" in result.stdout
 
 
 def test_cli_audit_approved_run(sample_clean_code):

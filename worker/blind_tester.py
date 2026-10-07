@@ -13,6 +13,8 @@ class SpecificationMetadata:
     docstring: str
     specification: str
     module_name: str = "target_module"
+    language: str = "python"
+    testing_framework: str = "pytest"
     approved_metadata: Optional[Dict[str, Any]] = None
 
     def validate_isolation(self, extra_context: Optional[Dict[str, Any]] = None) -> None:

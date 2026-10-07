@@ -42,7 +42,7 @@ EXIT_CLI_ERROR = 2
 def audit(
     path: str = typer.Argument(
         ...,
-        help="Path to Python file or directory to audit."
+        help="Path to source file or directory to audit."
     ),
     verbose: bool = typer.Option(
         False,

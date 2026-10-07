@@ -312,21 +312,26 @@ def run_security_scan(
     Orchestrates the hybrid deterministic + LLM security verification pipeline:
     Target Code -> Semgrep & Bandit -> Normalized Findings -> Groq Contextual Analysis -> Final Results
     """
-    bandit_scanner = BanditScanner()
+    is_python = file_path.endswith(".py")
+    combined_findings: List[SecurityFinding] = []
+
+    if is_python:
+        bandit_scanner = BanditScanner()
+        bandit_findings = bandit_scanner.scan_code(source_code, file_name=file_path)
+        combined_findings.extend(bandit_findings)
+
     semgrep_scanner = SemgrepScanner()
-
-    bandit_findings = bandit_scanner.scan_code(source_code, file_name=file_path)
     semgrep_findings = semgrep_scanner.scan_code(source_code, file_name=file_path)
-
-    combined_findings = bandit_findings + semgrep_findings
+    combined_findings.extend(semgrep_findings)
 
     if not combined_findings:
         # Code passed static security analysis
+        scanner_names = "Bandit or Semgrep" if is_python else "Semgrep"
         safe_finding = SecurityFinding(
             agent_name="Security-Guard",
             severity="INFO",
             title="Clean Security Scan",
-            description="No security vulnerabilities detected by Bandit or Semgrep static analysis.",
+            description=f"No security vulnerabilities detected by {scanner_names} static analysis.",
             file_path=file_path,
             evidence="Zero security findings from static scanners.",
             contextual_analysis="Target code passed deterministic security checks."

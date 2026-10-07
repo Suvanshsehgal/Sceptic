@@ -1,215 +1,98 @@
-import ast
-import inspect
-import importlib
-import builtins
+"""
+Language-Agnostic Fact-Checker Agent.
+Delegates deterministic API and call verification to language-specific adapters.
+No longer assumes Python AST, inspect(), or dir() directly.
+"""
+import os
+import sys
 from typing import List, Dict, Any, Optional
 
-class FactCheckerFinding:
-    def __init__(self, severity: str, type: str, title: str, description: str, line_number: int, api_name: str):
-        self.agent_name = "Fact-Checker"
-        self.severity = severity
-        self.type = type # VALID, INVALID, UNRESOLVED
-        self.title = title
-        self.description = description
-        self.line_number = line_number
-        self.api_name = api_name
-        self.evidence = f"Line {line_number}: {description}"
+# Ensure paths
+sys.path.insert(0, os.path.dirname(__file__))
 
-    def to_dict(self):
-        return {
-            "agent_name": self.agent_name,
-            "severity": self.severity,
-            "status": self.type,
-            "title": self.title,
-            "description": self.description,
-            "line_number": self.line_number,
-            "evidence": self.evidence
-        }
+from languages.detector import LanguageDetector
+from languages.base import LanguageAdapterRegistry
+from languages.models import (
+    ParsedCodeFile,
+    NormalizedFinding,
+    VerificationStatus,
+    FindingSeverity
+)
 
-class APIChecker(ast.NodeVisitor):
+
+class FactCheckerAgent:
+    """
+    Language-Agnostic Fact-Checker Agent.
+    
+    Architecture:
+    Fact Checker
+        ↓
+    Language Detection
+        ↓
+    Language Adapter Registry
+        ↓
+    Language Adapter (Python / Java / JS / TS)
+        ↓
+    Deterministic Verification
+        ↓
+    Normalized Findings
+    """
     def __init__(self):
-        self.findings: List[FactCheckerFinding] = []
-        self.imports: Dict[str, str] = {} # alias -> module_name
-        
-    def visit_Import(self, node: ast.Import):
-        for alias in node.names:
-            name = alias.asname if alias.asname else alias.name
-            self.imports[name] = alias.name
-        self.generic_visit(node)
+        self.detector = LanguageDetector()
 
-    def visit_ImportFrom(self, node: ast.ImportFrom):
-        if node.module:
-            for alias in node.names:
-                name = alias.asname if alias.asname else alias.name
-                self.imports[name] = f"{node.module}.{alias.name}"
-        self.generic_visit(node)
+    def analyze_code(
+        self,
+        source_code: str,
+        file_path: str = "target.py",
+        language: Optional[str] = None,
+        project_context: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Analyzes source code deterministically using the appropriate language adapter.
+        Returns a list of structured, normalized findings.
+        """
+        # 1. Detect language if not explicitly provided
+        detected_lang = language or self.detector.detect_file_language(file_path)
+        if not detected_lang:
+            # Fallback heuristic: check if file has python-like or js-like content, default python
+            detected_lang = "python"
 
-    def _resolve_name(self, node: ast.expr) -> Optional[str]:
-        if isinstance(node, ast.Name):
-            return node.id
-        elif isinstance(node, ast.Attribute):
-            base = self._resolve_name(node.value)
-            if base:
-                return f"{base}.{node.attr}"
-        return None
+        # 2. Lookup Adapter from Registry
+        adapter = LanguageAdapterRegistry.get_adapter(detected_lang)
+        if not adapter:
+            return [
+                NormalizedFinding(
+                    agent_name="Fact-Checker",
+                    severity=FindingSeverity.INFO.value,
+                    status=VerificationStatus.UNSUPPORTED.value,
+                    title=f"Unsupported Language: {detected_lang}",
+                    description=f"No verification adapter registered for language '{detected_lang}'.",
+                    file_path=file_path,
+                    line_number=1,
+                    evidence={"language": detected_lang, "status": "UNSUPPORTED"},
+                    recommendation=f"Add a LanguageAdapter for '{detected_lang}' to enable verification."
+                ).to_dict()
+            ]
 
-    def visit_Call(self, node: ast.Call):
-        api_name = self._resolve_name(node.func)
-        
-        if not api_name:
-            raw_name = "unknown_call"
-            if isinstance(node.func, ast.Attribute):
-                raw_name = f"*.{node.func.attr}"
-                
-            self.findings.append(FactCheckerFinding(
-                severity="INFO",
-                type="UNRESOLVED",
-                title="Unresolved Dynamic Call",
-                description=f"Cannot statically resolve call to '{raw_name}'.",
-                line_number=node.lineno,
-                api_name=raw_name
-            ))
-            self.generic_visit(node)
-            return
+        # 3. Parse code using adapter
+        parsed_file = adapter.parse_code(source_code, file_path=file_path)
 
-        parts = api_name.split('.')
-        base_name = parts[0]
-        
-        resolved_full_path = api_name
-        if base_name in self.imports:
-            import_path = self.imports[base_name]
-            if len(parts) > 1:
-                resolved_full_path = f"{import_path}.{'.'.join(parts[1:])}"
-            else:
-                resolved_full_path = import_path
-        elif hasattr(builtins, base_name):
-            resolved_full_path = f"builtins.{api_name}"
-            
-        resolved_parts = resolved_full_path.split('.')
-        
-        target_obj = None
-        
-        for i in range(len(resolved_parts), 0, -1):
-            mod_candidate = ".".join(resolved_parts[:i])
-            try:
-                mod = importlib.import_module(mod_candidate)
-                target_obj = mod
-                
-                attr_parts = resolved_parts[i:]
-                for attr in attr_parts:
-                    if hasattr(target_obj, attr):
-                        target_obj = getattr(target_obj, attr)
-                    else:
-                        target_obj = None
-                        break
-                if target_obj is not None:
-                    break
-            except ImportError:
-                continue
+        # 4. Perform deterministic verification
+        findings = adapter.verify_api_usage(parsed_file, project_context=project_context)
 
-        if not target_obj:
-            if base_name in self.imports or hasattr(builtins, base_name) or base_name in ['os', 'sys', 'json', 're']:
-                self.findings.append(FactCheckerFinding(
-                    severity="HIGH",
-                    type="INVALID",
-                    title="Non-existent API",
-                    description=f"The API '{api_name}' does not exist in the installed environment.",
-                    line_number=node.lineno,
-                    api_name=api_name
-                ))
-            else:
-                title = "Unresolved Import" if api_name == base_name else "Unresolved Dynamic Call"
-                self.findings.append(FactCheckerFinding(
-                    severity="INFO",
-                    type="UNRESOLVED",
-                    title=title,
-                    description=f"Cannot resolve module or object for '{api_name}'.",
-                    line_number=node.lineno,
-                    api_name=api_name
-                ))
-            self.generic_visit(node)
-            return
+        return [f.to_dict() for f in findings]
 
-        if not callable(target_obj):
-            self.findings.append(FactCheckerFinding(
-                severity="HIGH",
-                type="INVALID",
-                title="Not Callable",
-                description=f"'{api_name}' is not callable.",
-                line_number=node.lineno,
-                api_name=api_name
-            ))
-            self.generic_visit(node)
-            return
-            
-        try:
-            sig = inspect.signature(target_obj)
-        except ValueError:
-            self.findings.append(FactCheckerFinding(
-                severity="INFO",
-                type="UNRESOLVED",
-                title="Cannot inspect signature",
-                description=f"Signature for '{api_name}' is not introspectable.",
-                line_number=node.lineno,
-                api_name=api_name
-            ))
-            self.generic_visit(node)
-            return
-            
-        valid = True
-        provided_kwargs = [kw.arg for kw in node.keywords if kw.arg is not None]
-        
-        for kw in provided_kwargs:
-            if kw not in sig.parameters:
-                has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
-                if not has_kwargs:
-                    self.findings.append(FactCheckerFinding(
-                        severity="MEDIUM",
-                        type="INVALID",
-                        title="Invalid Keyword Parameter",
-                        description=f"Parameter '{kw}' does not exist in '{api_name}'.",
-                        line_number=node.lineno,
-                        api_name=api_name
-                    ))
-                    valid = False
-                    
-        provided_args = len(node.args)
-        required_params = [p.name for p in sig.parameters.values() if p.default == inspect.Parameter.empty and p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)]
-        
-        unmet_required = [p for p in required_params if p not in provided_kwargs]
-        
-        if len(unmet_required) > provided_args:
-            has_varargs = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters.values())
-            if not has_varargs:
-                missing = unmet_required[provided_args:]
-                self.findings.append(FactCheckerFinding(
-                    severity="HIGH",
-                    type="INVALID",
-                    title="Missing Required Parameter",
-                    description=f"Missing required parameter(s): {', '.join(missing)} for '{api_name}'.",
-                    line_number=node.lineno,
-                    api_name=api_name
-                ))
-                valid = False
 
-        if valid:
-            self.findings.append(FactCheckerFinding(
-                severity="INFO",
-                type="VALID",
-                title="Valid API Usage",
-                description=f"API '{api_name}' and its arguments are valid.",
-                line_number=node.lineno,
-                api_name=api_name
-            ))
+# Backwards compatibility helper function
+_default_agent = FactCheckerAgent()
 
-        self.generic_visit(node)
-
-def analyze_code(source_code: str) -> List[Dict]:
-    try:
-        tree = ast.parse(source_code)
-    except SyntaxError as e:
-        return [FactCheckerFinding("CRITICAL", "INVALID", "Syntax Error", str(e), e.lineno or 1, "syntax").to_dict()]
-        
-    checker = APIChecker()
-    checker.visit(tree)
-    return [f.to_dict() for f in checker.findings]
+def analyze_code(
+    source_code: str,
+    file_path: str = "target.py",
+    language: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Backwards-compatible API entrypoint for fact_checker.py.
+    Used by orchestrator, CLI, and legacy tests.
+    """
+    return _default_agent.analyze_code(source_code, file_path=file_path, language=language)

@@ -47,11 +47,15 @@ class AuditOrchestrator:
         # STEP 1: FAN-OUT TO INDEPENDENT AGENTS
         # ========================================================
         
-        # 1. Fact-Checker (AST API Inspection)
+        # 1. Fact-Checker (Language-Agnostic Deterministic Verification)
         fact_checker_findings: List[Dict[str, Any]] = []
         try:
             logger.info("Executing Fact-Checker Agent...")
-            fact_checker_findings = analyze_code(source_code)
+            fact_checker_findings = analyze_code(
+                source_code=source_code,
+                file_path=file_path,
+                language=getattr(specification_metadata, "language", None)
+            )
             logger.info(f"Fact-Checker completed with {len(fact_checker_findings)} findings.")
         except Exception as e:
             logger.error(f"Fact-Checker Agent failed: {str(e)}")

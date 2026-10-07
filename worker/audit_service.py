@@ -16,6 +16,10 @@ from orchestrator import AuditOrchestrator
 from blind_tester import SpecificationMetadata
 from synthesizer import TrustScoreCalculator, ReportSynthesizer
 
+from languages.detector import LanguageDetector, DEFAULT_IGNORED_DIRS, EXTENSION_MAP
+from languages.universal_parser import UniversalParser
+from languages.base import LanguageAdapterRegistry
+
 logger = logging.getLogger("sceptic.service")
 
 class AuditService:
@@ -36,6 +40,7 @@ class AuditService:
     def __init__(self):
         self.orchestrator = AuditOrchestrator()
         self.synthesizer = ReportSynthesizer()
+        self.detector = LanguageDetector()
 
     def audit_path(
         self,
@@ -44,6 +49,7 @@ class AuditService:
     ) -> Dict[str, Any]:
         """
         Validates target path and executes the Sceptic audit pipeline in-process.
+        Supports multi-language projects (Python, Java, JavaScript, TypeScript).
         Returns a structured audit report.
         """
         path_obj = Path(target_path).resolve()
@@ -56,32 +62,34 @@ class AuditService:
         if not os.access(path_obj, os.R_OK):
             raise PermissionError(f"Path is not readable: {target_path}")
 
-        # 3. Collect target Python files
-        python_files: List[Path] = []
+        # 3. Collect target files across supported languages
+        target_files: List[Path] = []
         if path_obj.is_file():
-            if path_obj.suffix != ".py":
-                raise ValueError(f"Target file must be a Python source file (.py): {path_obj.name}")
-            python_files = [path_obj]
+            lang = self.detector.detect_file_language(str(path_obj))
+            if not lang:
+                raise ValueError(f"Unsupported file type: {path_obj.name}")
+            target_files = [path_obj]
         elif path_obj.is_dir():
-            # Exclude virtual environments, git, and cache directories
-            excluded_dirs = {
-                ".git", "__pycache__", ".pytest_cache", ".venv", "venv", "env",
-                "node_modules", "dist", "build", ".mypy_cache"
-            }
             for root, dirs, files in os.walk(path_obj):
-                # Filter out excluded directories in-place
-                dirs[:] = [d for d in dirs if d not in excluded_dirs and not d.startswith(".")]
+                dirs[:] = [
+                    d for d in dirs
+                    if d not in DEFAULT_IGNORED_DIRS and not d.startswith(".")
+                ]
                 for file in files:
-                    if file.endswith(".py") and not file.startswith("test_"):
-                        python_files.append(Path(root) / file)
+                    ext = Path(file).suffix.lower()
+                    if ext in EXTENSION_MAP and not file.startswith("test_") and not file.endswith(".test.js") and not file.endswith(".test.ts"):
+                        target_files.append(Path(root) / file)
 
-            if not python_files:
-                raise ValueError(f"No Python source files found in directory: {target_path}")
+            if not target_files:
+                raise ValueError(f"No supported source files found in directory: {target_path}")
         else:
             raise ValueError(f"Unsupported path type: {target_path}")
 
+        # Detect overall language distribution
+        lang_stats = self.detector.detect_languages(target_path)
+
         if progress_callback:
-            progress_callback("START", f"Discovered {len(python_files)} Python file(s) for audit.")
+            progress_callback("START", f"Discovered {len(target_files)} source file(s) across languages: {', '.join([l['name'] for l in lang_stats.get('languages', [])])}.")
 
         all_findings: List[Dict[str, Any]] = []
         scanned_files_list: List[str] = []
@@ -93,15 +101,18 @@ class AuditService:
         }
 
         # 4. Audit each discovered file
-        for py_file in python_files:
-            rel_path = str(py_file.relative_to(path_obj.parent if path_obj.is_file() else path_obj))
+        for src_file in target_files:
+            rel_path = str(src_file.relative_to(path_obj.parent if path_obj.is_file() else path_obj))
             scanned_files_list.append(rel_path)
+            file_lang = self.detector.detect_file_language(str(src_file)) or "python"
+            adapter = LanguageAdapterRegistry.get_adapter(file_lang)
+            test_fw = adapter.testing_framework if adapter else "pytest"
 
             try:
-                with open(py_file, "r", encoding="utf-8") as f:
+                with open(src_file, "r", encoding="utf-8") as f:
                     source_code = f.read()
             except Exception as e:
-                logger.error(f"Failed to read file {py_file}: {e}")
+                logger.error(f"Failed to read file {src_file}: {e}")
                 all_findings.append({
                     "agent_name": "Security-Guard",
                     "severity": "MEDIUM",
@@ -113,7 +124,7 @@ class AuditService:
                 continue
 
             # Extract functions or module-level specs
-            func_specs = self._extract_specifications(source_code, py_file.stem)
+            func_specs = self._extract_specifications(source_code, src_file.stem, language=file_lang, testing_framework=test_fw)
 
             for spec in func_specs:
                 if progress_callback:
@@ -182,23 +193,31 @@ class AuditService:
             "total_findings": len(all_findings)
         }
 
-    def _extract_specifications(self, source_code: str, module_name: str) -> List[SpecificationMetadata]:
+    def _extract_specifications(
+        self,
+        source_code: str,
+        module_name: str,
+        language: str = "python",
+        testing_framework: str = "pytest"
+    ) -> List[SpecificationMetadata]:
         """
-        Parses source code AST to identify top-level functions and docstrings.
-        If no functions exist, generates a module-level specification.
+        Parses source code to identify functions and docstrings across languages.
+        If no functions exist, generates an entrypoint specification.
         """
         specs: List[SpecificationMetadata] = []
         try:
-            tree = ast.parse(source_code)
-            for node in tree.body:
-                if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-                    docstring = ast.get_docstring(node) or "No docstring provided."
-                    spec_text = f"Function '{node.name}' specification derived from docstring."
+            parsed = UniversalParser.parse(source_code, language, file_path=f"{module_name}.{language}")
+            for fn in parsed.functions:
+                if not fn.name.startswith("_") and fn.name not in ("anonymous", ""):
+                    doc = fn.docstring or f"Function '{fn.name}'."
+                    spec_text = f"Function '{fn.name}' specification in {language}."
                     specs.append(SpecificationMetadata(
-                        function_name=node.name,
-                        docstring=docstring,
+                        function_name=fn.name,
+                        docstring=doc,
                         specification=spec_text,
-                        module_name=module_name
+                        module_name=module_name,
+                        language=language,
+                        testing_framework=testing_framework
                     ))
         except Exception:
             pass
@@ -207,9 +226,11 @@ class AuditService:
         if not specs:
             specs.append(SpecificationMetadata(
                 function_name=f"{module_name}_entry",
-                docstring="Module execution inspection.",
+                docstring=f"{language.capitalize()} module execution inspection.",
                 specification="Verify safe and correct execution.",
-                module_name=module_name
+                module_name=module_name,
+                language=language,
+                testing_framework=testing_framework
             ))
 
         return specs

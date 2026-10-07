@@ -2,6 +2,8 @@ fastapi
 uvicorn
 pydantic
 psycopg2-binary
+asyncpg
+greenlet
 sqlalchemy
 alembic
 pytest
@@ -12,3 +14,8 @@ groq
 bandit
 semgrep
 crewai
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-typescript
+tree-sitter-java
