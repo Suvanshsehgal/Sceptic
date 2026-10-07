@@ -870,24 +870,25 @@ def _display_rich_report(report: dict, verbose: bool = False):
     displayed = actionable if actionable else [f for f in findings if not (isinstance(f.get("evidence"), dict) and "called_api" in f.get("evidence", {}))]
 
     if displayed:
-        f_table = Table(title="Key Verification Findings", border_style="yellow")
+        table_title = "Finding Evidence Snippets" if verbose else "Key Verification Findings"
+        f_table = Table(title=table_title, border_style="yellow")
         f_table.add_column("Agent", style="cyan")
         f_table.add_column("Severity")
         f_table.add_column("Title", style="bold")
         f_table.add_column("Location", style="dim")
-        f_table.add_column("Evidence", max_width=45)
+        f_table.add_column("Evidence", no_wrap=True if verbose else False, max_width=None if verbose else 45)
 
-        for f in displayed[:15]:
+        for f in (displayed if verbose else displayed[:15]):
             sev = (f.get("severity") or "INFO").upper()
             col = "red" if sev in ("CRITICAL", "HIGH") else "yellow" if sev == "MEDIUM" else "cyan" if sev == "LOW" else "dim"
             loc = f"{f.get('file_path', 'target')}:{f.get('line_number') or '-'}"
             ev = str(f.get("evidence", ""))
-            if len(ev) > 50:
+            if not verbose and len(ev) > 50:
                 ev = ev[:47] + "..."
             f_table.add_row(f.get("agent_name"), f"[{col}]{sev}[/{col}]", str(f.get("title", ""))[:45], loc, ev)
 
         console.print(f_table)
-        if len(displayed) > 15:
+        if not verbose and len(displayed) > 15:
             console.print(f"[dim]Showing top 15 of {len(displayed)} findings. Full details available in Web Dashboard.[/dim]")
     elif findings:
         console.print(f"[dim]✓ All {len(findings)} symbols and API calls verified successfully with 0 defects.[/dim]")

@@ -337,3 +337,28 @@ npm install
 npm run dev
 # Dashboard is available at http://localhost:5173
 ```
+
+---
+
+## Phase 9: Deployment & DevOps Foundation
+
+Phase 9 establishes the multi-container deployment architecture for Sceptic and provides an independent target service for future post-deployment DevOps agents.
+
+### Containerized Topology
+- **Sceptic Backend**: FastAPI application with database health endpoints on port `8000`.
+- **Sceptic Celery Worker**: Dedicated container executing background audit workflows.
+- **Sceptic Frontend**: React/Vite dashboard on port `5173`.
+- **Redis**: Celery message broker and result backend on port `6380:6379`.
+- **PostgreSQL**: Local container database with persistent volume and external Supabase fallback.
+- **Target Application**: Independent deployable service on port `8080` exposing `/health`, `/version`, and `/api/demo`.
+
+### Quickstart with Docker Compose
+```bash
+# Start development stack (6 services)
+docker compose up --build
+
+# Or run the production profile with structured log rotation
+docker compose -f infra/docker-compose.prod.yml up -d --build
+```
+
+See [docs/deployment.md](docs/deployment.md) for full deployment architecture and configuration details.

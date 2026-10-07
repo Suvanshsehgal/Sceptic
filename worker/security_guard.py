@@ -231,13 +231,15 @@ class SemgrepScanner:
         return findings
 
 
+_UNSET = object()
+
 class GroqContextualAnalyzer:
     """
     Provides contextual analysis over deterministic scanner findings using Groq.
     Does NOT replace scanner evidence; provides true-positive validation and exploit assessment.
     """
-    def __init__(self, api_key: Optional[str] = None, model: str = "llama-3.3-70b-versatile"):
-        self.api_key = api_key if api_key is not None else os.getenv("GROQ_API_KEY")
+    def __init__(self, api_key: Any = _UNSET, model: str = "llama-3.3-70b-versatile"):
+        self.api_key = os.getenv("GROQ_API_KEY") if api_key is _UNSET else api_key
         self.model = model
 
     def analyze_findings(

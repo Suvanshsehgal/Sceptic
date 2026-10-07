@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 import os
 
 def test_crewai():
-    # Only run if LLM API key is available
-    if not os.getenv("OPENAI_API_KEY") and not os.getenv("GROQ_API_KEY"):
-        print("Skipping CrewAI test, no API key found.")
+    # CrewAI fact checker agent specifically requires OpenAI API key
+    if not os.getenv("OPENAI_API_KEY"):
+        print("Skipping CrewAI test, no OPENAI_API_KEY found.")
         return
 
     code = """
