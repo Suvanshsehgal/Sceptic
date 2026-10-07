@@ -838,3 +838,343 @@ async def receive_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             "task_id": task_id
         }
     )
+
+
+# ========================================================
+# 7. DEPLOYMENT & OBSERVABILITY ROUTES (PHASE 10)
+# ========================================================
+
+async def _get_authorized_project(
+    project_id: UUID,
+    user_id: UUID,
+    db: AsyncSession
+) -> models.Project:
+    """Helper to verify and return a user's owned project."""
+    stmt = select(models.Project).filter(
+        models.Project.id == project_id,
+        models.Project.user_id == user_id
+    )
+    res = await db.execute(stmt)
+    project = res.scalars().first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    return project
+
+
+async def _get_authorized_deployment(
+    deployment_id: UUID,
+    user_id: UUID,
+    db: AsyncSession
+) -> models.Deployment:
+    """Helper to verify and return a deployment belonging to a user's project."""
+    stmt = (
+        select(models.Deployment)
+        .join(models.Project, models.Deployment.project_id == models.Project.id)
+        .filter(
+            models.Deployment.id == deployment_id,
+            models.Project.user_id == user_id
+        )
+    )
+    res = await db.execute(stmt)
+    deployment = res.scalars().first()
+    if not deployment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Deployment not found"
+        )
+    return deployment
+
+
+@app.post(
+    "/projects/{project_id}/deployments",
+    response_model=schemas.DeploymentResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_deployment(
+    project_id: UUID,
+    payload: schemas.DeploymentCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new deployment under an authorized project.
+    Strictly verifies user ownership through Project -> User.
+    """
+    await _get_authorized_project(project_id, current_user.id, db)
+
+    # If previous_deployment_id is provided, verify it belongs to this project
+    if payload.previous_deployment_id:
+        prev_stmt = select(models.Deployment).filter(
+            models.Deployment.id == payload.previous_deployment_id,
+            models.Deployment.project_id == project_id
+        )
+        prev_res = await db.execute(prev_stmt)
+        if not prev_res.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="previous_deployment_id must refer to a deployment within the same project"
+            )
+
+    deployment = models.Deployment(
+        project_id=project_id,
+        commit_sha=payload.commit_sha,
+        image_name=payload.image_name,
+        image_tag=payload.image_tag,
+        image_digest=payload.image_digest,
+        environment=payload.environment,
+        version=payload.version,
+        status=payload.status.value if hasattr(payload.status, "value") else str(payload.status),
+        deployed_at=payload.deployed_at,
+        completed_at=payload.completed_at,
+        previous_deployment_id=payload.previous_deployment_id
+    )
+    db.add(deployment)
+    await db.commit()
+    await db.refresh(deployment)
+    return deployment
+
+
+@app.get(
+    "/projects/{project_id}/deployments",
+    response_model=List[schemas.DeploymentResponse]
+)
+async def list_project_deployments(
+    project_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all deployments under an authorized project.
+    """
+    await _get_authorized_project(project_id, current_user.id, db)
+
+    stmt = (
+        select(models.Deployment)
+        .filter(models.Deployment.project_id == project_id)
+        .order_by(models.Deployment.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+
+@app.get(
+    "/deployments/{deployment_id}",
+    response_model=schemas.DeploymentResponse
+)
+async def get_deployment(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieve deployment details by ID.
+    Strictly verifies ownership through Deployment -> Project -> User.
+    """
+    return await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+
+@app.patch(
+    "/deployments/{deployment_id}/status",
+    response_model=schemas.DeploymentResponse
+)
+async def update_deployment_status(
+    deployment_id: UUID,
+    payload: schemas.DeploymentStatusUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update the lifecycle status and timestamps of an authorized deployment.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    deployment.status = payload.status.value if hasattr(payload.status, "value") else str(payload.status)
+    if payload.deployed_at is not None:
+        deployment.deployed_at = payload.deployed_at
+    if payload.completed_at is not None:
+        deployment.completed_at = payload.completed_at
+    await db.commit()
+    await db.refresh(deployment)
+    return deployment
+
+
+@app.get(
+    "/deployments/{deployment_id}/telemetry",
+    response_model=List[schemas.TelemetrySnapshotResponse]
+)
+async def list_deployment_telemetry(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List telemetry observations for an authorized deployment.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    stmt = (
+        select(models.TelemetrySnapshot)
+        .filter(models.TelemetrySnapshot.deployment_id == deployment_id)
+        .order_by(models.TelemetrySnapshot.timestamp.desc())
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+
+@app.post(
+    "/deployments/{deployment_id}/telemetry",
+    response_model=schemas.TelemetrySnapshotResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def record_telemetry_snapshot(
+    deployment_id: UUID,
+    payload: schemas.TelemetrySnapshotCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Record a new telemetry observation for an authorized deployment.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    snapshot = models.TelemetrySnapshot(
+        deployment_id=deployment_id,
+        timestamp=payload.timestamp,
+        health_status=payload.health_status,
+        request_count=payload.request_count,
+        error_count=payload.error_count,
+        error_rate=payload.error_rate,
+        latency_avg=payload.latency_avg,
+        latency_p95=payload.latency_p95
+    )
+    db.add(snapshot)
+    await db.commit()
+    await db.refresh(snapshot)
+    return snapshot
+
+
+@app.get(
+    "/deployments/{deployment_id}/drift",
+    response_model=List[schemas.DriftEventResponse]
+)
+async def list_deployment_drift(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List drift events recorded for an authorized deployment.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    stmt = (
+        select(models.DriftEvent)
+        .filter(models.DriftEvent.deployment_id == deployment_id)
+        .order_by(models.DriftEvent.detected_at.desc())
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+
+@app.post(
+    "/deployments/{deployment_id}/drift",
+    response_model=schemas.DriftEventResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def record_drift_event(
+    deployment_id: UUID,
+    payload: schemas.DriftEventCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Record a detected drift event for an authorized deployment.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    event = models.DriftEvent(
+        deployment_id=deployment_id,
+        drift_type=payload.drift_type,
+        expected_value=payload.expected_value,
+        actual_value=payload.actual_value,
+        severity=payload.severity,
+        description=payload.description,
+        detected_at=payload.detected_at,
+        resolved_at=payload.resolved_at
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+    return event
+
+
+@app.get(
+    "/deployments/{deployment_id}/rollbacks",
+    response_model=List[schemas.RollbackRecordResponse]
+)
+async def list_deployment_rollbacks(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List rollback operations recorded for an authorized deployment.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    stmt = (
+        select(models.RollbackRecord)
+        .filter(models.RollbackRecord.deployment_id == deployment_id)
+        .order_by(models.RollbackRecord.created_at.desc())
+    )
+    res = await db.execute(stmt)
+    return res.scalars().all()
+
+
+@app.post(
+    "/deployments/{deployment_id}/rollbacks",
+    response_model=schemas.RollbackRecordResponse,
+    status_code=status.HTTP_201_CREATED
+)
+async def record_rollback(
+    deployment_id: UUID,
+    payload: schemas.RollbackRecordCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Record a rollback operation for an authorized deployment.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+
+    # If target_deployment_id is provided, verify it belongs to the same project
+    if payload.target_deployment_id:
+        target_stmt = select(models.Deployment).filter(
+            models.Deployment.id == payload.target_deployment_id,
+            models.Deployment.project_id == deployment.project_id
+        )
+        target_res = await db.execute(target_stmt)
+        if not target_res.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="target_deployment_id must belong to the same project"
+            )
+
+    record = models.RollbackRecord(
+        deployment_id=deployment_id,
+        target_deployment_id=payload.target_deployment_id,
+        reason=payload.reason,
+        trigger_source=payload.trigger_source,
+        status=payload.status,
+        safety_check_result=payload.safety_check_result,
+        started_at=payload.started_at,
+        completed_at=payload.completed_at,
+        error_message=payload.error_message
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+    return record
+
