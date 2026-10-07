@@ -15,30 +15,30 @@ import {
 } from 'lucide-react';
 
 interface FindingsPageProps {
-  onSelectAudit: (auditId: number) => void;
+  onSelectAudit: (auditId: string | number) => void;
 }
 
 export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => {
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [agentFilter, setAgentFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
-  const [expandedFindings, setExpandedFindings] = useState<Record<number, boolean>>({});
+  const [expandedFindings, setExpandedFindings] = useState<Record<string, boolean>>({});
 
   const { data: audits, isLoading, error } = useQuery<AuditRun[]>({
     queryKey: ['audits'],
     queryFn: () => fetchAudits(0, 100),
   });
 
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: string | number) => {
     setExpandedFindings((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [String(id)]: !prev[String(id)],
     }));
   };
 
   // Flatten findings across audits while retaining parent audit metadata
   interface FindingWithParent extends AgentFinding {
-    audit_id: number;
+    audit_id: string | number;
     repo_name?: string;
   }
 
@@ -46,7 +46,7 @@ export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => 
     (audit.findings || []).map((f) => ({
       ...f,
       audit_id: audit.id,
-      repo_name: audit.pull_request?.repository_full_name,
+      repo_name: audit.pull_request?.repository || audit.pull_request?.repository_full_name || 'Project Audit',
     }))
   );
 
@@ -105,9 +105,9 @@ export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => 
               className="bg-transparent text-slate-300 focus:outline-none"
             >
               <option value="ALL">All Agents</option>
-              <option value="Fact-Checker">Fact-Checker</option>
-              <option value="Blind-Tester">Blind-Tester</option>
-              <option value="Security-Guard">Security-Guard</option>
+              {Array.from(new Set(['Fact-Checker', 'Blind-Tester', 'Security-Guard', ...allFindings.map((f) => f.agent_name)])).filter(Boolean).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -182,7 +182,7 @@ export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => 
                       }}
                       className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 font-sans text-xs transition-colors flex items-center gap-1"
                     >
-                      <span>Audit #{finding.audit_id}</span>
+                      <span>Audit #{String(finding.audit_id).substring(0, 8)}</span>
                       <ExternalLink className="h-3 w-3" />
                     </button>
                   </div>
@@ -203,7 +203,9 @@ export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => 
                           Evidence & Trace
                         </span>
                         <pre className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400/90 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
-                          {finding.evidence}
+                          {typeof finding.evidence === 'object'
+                            ? JSON.stringify(finding.evidence, null, 2)
+                            : String(finding.evidence)}
                         </pre>
                       </div>
                     )}

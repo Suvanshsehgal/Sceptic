@@ -20,13 +20,13 @@ import {
 } from 'lucide-react';
 
 interface AuditDetailViewProps {
-  auditId: number;
+  auditId: number | string;
   onBack: () => void;
 }
 
 export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBack }) => {
   const [selectedAgent, setSelectedAgent] = useState<string>('ALL');
-  const [expandedFindings, setExpandedFindings] = useState<Record<number, boolean>>({});
+  const [expandedFindings, setExpandedFindings] = useState<Record<string, boolean>>({});
 
   const { data: audit, isLoading, error } = useQuery<AuditRun>({
     queryKey: ['audit', auditId],
@@ -34,10 +34,10 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
     refetchInterval: 5000,
   });
 
-  const toggleExpand = (findingId: number) => {
+  const toggleExpand = (findingId: string | number) => {
     setExpandedFindings((prev) => ({
       ...prev,
-      [findingId]: !prev[findingId],
+      [String(findingId)]: !prev[String(findingId)],
     }));
   };
 
@@ -72,7 +72,8 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
   const score = audit.trust_score;
   const findings = audit.findings || [];
 
-  const agentNames = ['ALL', 'Fact-Checker', 'Blind-Tester', 'Security-Guard'];
+  const dynamicAgents = Array.from(new Set(findings.map((f) => f.agent_name))).filter(Boolean);
+  const agentNames = ['ALL', ...Array.from(new Set(['Fact-Checker', 'Blind-Tester', 'Security-Guard', ...dynamicAgents]))];
   const filteredFindings = selectedAgent === 'ALL'
     ? findings
     : findings.filter((f) => f.agent_name.toLowerCase().includes(selectedAgent.toLowerCase()) || f.agent_name === selectedAgent);
@@ -113,11 +114,11 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
             {pr ? (
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <GitPullRequest className="h-3.5 w-3.5 text-slate-400" />
-                <span className="font-semibold text-slate-200">{pr.repository_full_name}</span>
+                <span className="font-semibold text-slate-200">{pr.repository || pr.repository_full_name || 'Project Audit'}</span>
                 <span>·</span>
-                <span>PR #{pr.pr_number}</span>
+                <span>PR #{pr.pr_number || 1}</span>
                 <span>·</span>
-                <span className="font-mono text-slate-400">commit {pr.commit_sha}</span>
+                <span className="font-mono text-slate-400">commit {String(pr.latest_commit_sha || pr.commit_sha || audit.commit_sha || 'cli-local').substring(0, 7)}</span>
                 {pr.branch_name && <span>· branch {pr.branch_name}</span>}
               </div>
             ) : (
@@ -280,7 +281,9 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
                             Evidence & Trace
                           </span>
                           <pre className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400/90 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
-                            {finding.evidence}
+                            {typeof finding.evidence === 'object'
+                              ? JSON.stringify(finding.evidence, null, 2)
+                              : String(finding.evidence)}
                           </pre>
                         </div>
                       )}
