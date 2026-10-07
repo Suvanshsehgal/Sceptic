@@ -22,3 +22,5 @@ tree-sitter-java
 PyJWT
 cryptography
 keyring
+prometheus-client>=0.20.0
+
