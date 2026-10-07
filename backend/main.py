@@ -51,8 +51,15 @@ def health_check():
 
 @app.get("/audits", response_model=List[schemas.AuditRunResponse])
 def get_audits(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    audits = db.query(models.AuditRun).offset(skip).limit(limit).all()
+    audits = db.query(models.AuditRun).order_by(models.AuditRun.id.desc()).offset(skip).limit(limit).all()
     return audits
+
+@app.get("/audits/{audit_id}", response_model=schemas.AuditRunResponse)
+def get_audit(audit_id: int, db: Session = Depends(get_db)):
+    audit = db.query(models.AuditRun).filter(models.AuditRun.id == audit_id).first()
+    if not audit:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    return audit
 
 @app.post("/webhook")
 async def receive_webhook(request: Request, db: Session = Depends(get_db)):

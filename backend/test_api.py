@@ -62,3 +62,26 @@ def test_get_audits_with_data():
     assert data[0]["pull_request_id"] == 1
     assert len(data[0]["findings"]) == 1
     assert data[0]["findings"][0]["title"] == "Test Finding"
+
+def test_get_audit_by_id():
+    db = TestingSessionLocal()
+    pr = models.PullRequest(repository_full_name="org/repo", pr_number=42, commit_sha="def5678")
+    db.add(pr)
+    db.commit()
+
+    audit = models.AuditRun(pull_request_id=pr.id, status="COMPLETED", trust_score=92)
+    db.add(audit)
+    db.commit()
+    audit_id = audit.id
+    db.close()
+
+    res = client.get(f"/audits/{audit_id}")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["id"] == audit_id
+    assert body["trust_score"] == 92
+    assert body["status"] == "COMPLETED"
+
+    # Test not found
+    res_not_found = client.get("/audits/999999")
+    assert res_not_found.status_code == 404

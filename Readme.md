@@ -247,3 +247,93 @@ pytest worker/test_phase5_orchestration.py -v
 # Run the complete test suite across all phases (37 tests):
 pytest backend/test_api.py worker/test_fact_checker.py worker/test_blind_tester.py worker/test_security_guard.py worker/test_phase4_crewai.py worker/test_phase5_orchestration.py -v
 ```
+
+---
+
+## Phase 6: Command-Line Interface (CLI)
+
+Phase 6 implements the **Typer + Rich** command-line interface. Developers and CI workflows can run synchronous, in-process Sceptic audits against files and directories directly from the terminal without routing through HTTP or Celery.
+
+### Architecture
+
+```
+CLI (Typer + Rich) ─────────┐
+FastAPI Webhook ────────────┼──► Shared AuditService (In-Process / Celery) ──► AuditOrchestrator
+Celery Worker ──────────────┘
+```
+
+The CLI reuses the underlying verification agents (`Fact-Checker`, `Blind Tester`, `Security Guard`, `Report Synthesizer`, and deterministic `Trust Score`) via a shared audit service (`worker/audit_service.py`) without duplicating agent logic.
+
+### Commands & Options
+
+```bash
+# General help
+sceptic --help
+
+# Audit command help
+sceptic audit --help
+
+# Audit a single Python file
+sceptic audit path/to/script.py
+
+# Audit an entire project directory
+sceptic audit path/to/project/
+
+# Audit with detailed evidence snippets
+sceptic audit path/to/script.py --verbose
+
+# Output machine-readable JSON for CI integration
+sceptic audit path/to/script.py --json
+```
+
+### Exit Codes
+
+| Exit Code | Meaning | Condition |
+|:---|:---|:---|
+| **`0`** | **SUCCESS** | Code approved (`APPROVE` recommendation, Trust Score >= 85). |
+| **`1`** | **AUDIT FAILURE** | Verification issues detected (`REQUEST_CHANGES` or `BLOCK`, Trust Score < 85). |
+| **`2`** | **CLI ERROR** | Invalid path, non-Python file, permission error, or runtime error. |
+
+### Terminal Display Features
+- **Live Spinner**: Clean in-process progress indicators during agent execution.
+- **Agent Status Table**: Status and count of findings contributed by Fact-Checker, Blind-Tester, and Security-Guard.
+- **Severity Breakdown**: Visual distribution across CRITICAL, HIGH, MEDIUM, LOW, and UNRESOLVED findings.
+- **Findings Table**: Detailed table listing severity, originating agent, title, file:line location, and description.
+- **Evidence Snippets (`-v`)**: Formatted panels displaying line-by-line evidence and test traces.
+- **Verdict Panel**: Prominently displays the final Trust Score (`/100`), Recommendation (`APPROVE`, `REQUEST_CHANGES`, `BLOCK`), and synthesized summary.
+
+### Testing Phase 6
+```bash
+# Run CLI test suite (9 tests)
+pytest cli/test_cli.py -v
+
+# Run complete project test suite across all phases (48 tests)
+pytest backend/test_api.py worker/ cli/ -v
+```
+
+---
+
+## Phase 7: React Dashboard + Documentation Center
+
+Phase 7 implements the developer-facing **React + Vite + TypeScript + TailwindCSS** web dashboard powered by **TanStack Query**, coupled with an in-app **Documentation Center**.
+
+### Frontend Architecture
+- **State Management**: TanStack Query (`@tanstack/react-query`) handles caching, auto-refetching, and network states.
+- **Single-Page Navigation**:
+  - `Dashboard`: Real-time audit metrics, average trust score, findings breakdown, and recent audit activity.
+  - `Audits`: Filterable and searchable repository of all pull requests and in-process audits.
+  - `Audit Details`: Granular breakdown of agent findings, evidence traces, and synthesizer assessment.
+  - `Findings`: Filter by severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) and agent (`Fact-Checker`, `Blind-Tester`, `Security-Guard`).
+  - `Documentation`: 19-section interactive developer guide and CLI installation manual.
+- **Backend Endpoints Consumed**:
+  - `GET /health`: Database and Redis connectivity monitoring.
+  - `GET /audits`: Paginated list of audit runs.
+  - `GET /audits/{id}`: Detailed single audit record with full findings and pull request metadata.
+
+### How to Run the Dashboard
+```bash
+cd frontend
+npm install
+npm run dev
+# Dashboard is available at http://localhost:5173
+```
