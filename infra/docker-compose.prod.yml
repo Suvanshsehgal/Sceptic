@@ -152,6 +152,58 @@ services:
     networks:
       - sceptic-prod-network
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: sceptic-prometheus-prod
+    restart: always
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_prod_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    depends_on:
+      target-service:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - sceptic-prod-network
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: sceptic-grafana-prod
+    restart: always
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards/definitions:/etc/grafana/provisioning/dashboards/definitions:ro
+      - grafana_prod_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - sceptic-prod-network
+
 networks:
   sceptic-prod-network:
     name: sceptic-prod-network
@@ -162,3 +214,7 @@ volumes:
     name: sceptic_postgres_prod_data
   redis_prod_data:
     name: sceptic_redis_prod_data
+  prometheus_prod_data:
+    name: sceptic_prometheus_prod_data
+  grafana_prod_data:
+    name: sceptic_grafana_prod_data

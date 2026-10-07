@@ -120,6 +120,48 @@ services:
     networks:
       - sceptic-network
 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: sceptic-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    depends_on:
+      target-service:
+        condition: service_healthy
+    networks:
+      - sceptic-network
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: sceptic-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/grafana/dashboards/definitions:/etc/grafana/provisioning/dashboards/definitions:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - sceptic-network
+
 networks:
   sceptic-network:
     name: sceptic-network
@@ -128,3 +170,7 @@ networks:
 volumes:
   postgres_data:
     name: sceptic_postgres_data
+  prometheus_data:
+    name: sceptic_prometheus_data
+  grafana_data:
+    name: sceptic_grafana_data
