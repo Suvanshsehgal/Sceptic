@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AuthModal } from './AuthModal';
+import { useQuery } from '@tanstack/react-query';
+import { fetchHealth } from '../api';
 
 interface SidebarProps {
   currentTab: string;
@@ -184,6 +186,12 @@ export const Header: React.FC<{
   title: string;
   subtitle?: string;
 }> = ({ onOpenMobile, title, subtitle }) => {
+  const { data: health, isError, isLoading } = useQuery({
+    queryKey: ['health'],
+    queryFn: fetchHealth,
+    refetchInterval: 10000,
+  });
+
   return (
     <header className="h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8">
       <div className="flex items-center gap-3">
@@ -199,10 +207,22 @@ export const Header: React.FC<{
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Engine Active</span>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-mono">
+            <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />
+            <span>Connecting...</span>
+          </div>
+        ) : isError || !health ? (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <span className="h-2 w-2 rounded-full bg-rose-400" />
+            <span>Engine Offline</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Engine Active</span>
+          </div>
+        )}
       </div>
     </header>
   );

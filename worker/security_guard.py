@@ -237,7 +237,7 @@ class GroqContextualAnalyzer:
     Does NOT replace scanner evidence; provides true-positive validation and exploit assessment.
     """
     def __init__(self, api_key: Optional[str] = None, model: str = "llama-3.3-70b-versatile"):
-        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.api_key = api_key if api_key is not None else os.getenv("GROQ_API_KEY")
         self.model = model
 
     def analyze_findings(
