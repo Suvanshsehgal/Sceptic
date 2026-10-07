@@ -19,3 +19,6 @@ tree-sitter-python
 tree-sitter-javascript
 tree-sitter-typescript
 tree-sitter-java
+PyJWT
+cryptography
+keyring
