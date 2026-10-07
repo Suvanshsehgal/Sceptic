@@ -362,3 +362,58 @@ docker compose -f infra/docker-compose.prod.yml up -d --build
 ```
 
 See [docs/deployment.md](docs/deployment.md) for full deployment architecture and configuration details.
+
+---
+
+## Phase 10: Deployment State & Database
+
+Phase 10 implements the persistent relational database state and API layer required for post-deployment monitoring, configuration drift detection, and automated rollback recovery.
+
+### Relational Schema Hierarchy
+```text
+User
+ └── Project
+       ├── PullRequests
+       ├── AuditRuns
+       ├── FeatureAnalyses
+       └── Deployments
+             ├── TelemetrySnapshots
+             ├── DriftEvents
+             └── RollbackRecords
+```
+
+### Models & Observability Entities
+- **Deployment**: Core record for application releases, image tags, commit SHAs, and statuses (`PENDING`, `DEPLOYING`, `ACTIVE`, `FAILED`, `ROLLED_BACK`).
+- **TelemetrySnapshot**: Captures timestamped health and performance observations (`request_count`, `error_rate`, `latency_avg`, `latency_p95`).
+- **DriftEvent**: Captures configuration, commit, or container image deviations (`expected_value` vs `actual_value`).
+- **RollbackRecord**: Records recovery operations and target fallback deployments with safety check validations.
+
+### Database Migrations
+Run the latest database schema migrations via Alembic:
+```bash
+alembic upgrade head
+```
+
+Verify migration heads:
+```bash
+alembic heads
+# Expected: a7d8e9f01234 (head)
+```
+
+---
+
+## Phase 11: CI/CD Pipeline + GHCR + Automated Deployment
+
+Phase 11 introduces GitHub Actions workflows for continuous integration, Docker image publishing to GitHub Container Registry (GHCR), and automated health-verified deployment.
+
+### Workflows
+- **CI Workflow (`.github/workflows/ci.yml`)**:
+  - Python test matrix covering Backend, Worker, CLI, and Target Service.
+  - Frontend React/Vite/TypeScript build validation.
+  - Docker Compose syntax and multi-container build verification.
+- **CD & Publishing Workflow (`.github/workflows/deploy.yml`)**:
+  - Packages and publishes Docker images to GHCR (`ghcr.io/<owner>/sceptic-<service>:<commit-sha>` and `:latest`).
+  - Launches container stack with runtime metadata (`COMMIT_SHA`, `APPLICATION_VERSION`, `ENVIRONMENT`).
+  - Executes deployment gating (`APPROVE` allowed, `BLOCK`/`REQUEST_CHANGES` prevented).
+  - Validates container readiness (`/health`), runtime metadata (`/version`), and commit identity.
+  - Records final deployment state in PostgreSQL (`DEPLOYING` $\to$ `ACTIVE` or `FAILED`).

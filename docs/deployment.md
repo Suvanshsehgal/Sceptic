@@ -175,3 +175,116 @@ pytest target_service/test_target_service.py -v
 # Run full project test suite
 pytest target_service/ worker/ cli/ backend/ -v
 ```
+
+---
+
+## 7. Deployment State & Observability Models (Phase 10)
+
+Phase 10 introduces the persistent database schema required for post-deployment observability, drift tracking, and recovery.
+
+### Relational Hierarchy
+
+```text
+User
+ └── Project
+       ├── PullRequests
+       ├── AuditRuns
+       ├── FeatureAnalyses
+       └── Deployments
+             ├── TelemetrySnapshots
+             ├── DriftEvents
+             └── RollbackRecords
+```
+
+### Models
+
+- **`Deployment`**: Represents an individual application deployment record attached to a `Project`.
+  - Captures `commit_sha`, `image_name`, `image_tag`, `image_digest`, `environment`, `version`, `status` (`PENDING`, `DEPLOYING`, `ACTIVE`, `FAILED`, `ROLLED_BACK`), and timestamps.
+  - Supports self-referential linking via `previous_deployment_id` with safe `ON DELETE SET NULL` constraints to preserve deployment history.
+- **`TelemetrySnapshot`**: Persists structured metric snapshots associated with a deployment.
+  - Stores `health_status`, `request_count`, `error_count`, `error_rate`, `latency_avg`, and `latency_p95`.
+  - Serves as the storage foundation for post-deployment health and performance observation.
+- **`DriftEvent`**: Records configuration or image discrepancies between expected and observed state.
+  - Tracks `drift_type` (`COMMIT`, `IMAGE`, `IMAGE_DIGEST`, `CONFIGURATION`, `ENVIRONMENT`), `expected_value`, `actual_value`, `severity`, and detection timestamps.
+- **`RollbackRecord`**: Records recovery actions and target restore points for a deployment.
+  - Links the originating `deployment_id` with `target_deployment_id`, storing `reason`, `trigger_source`, `status`, and safety check results.
+
+### API Endpoints
+
+- `POST /projects/{project_id}/deployments`: Create new deployment under an owned project.
+- `GET /projects/{project_id}/deployments`: List all deployments for a project.
+- `GET /deployments/{deployment_id}`: Retrieve deployment metadata (enforces `Deployment -> Project -> User` ownership).
+- `GET /deployments/{deployment_id}/telemetry` & `POST`: List or record telemetry snapshots.
+- `GET /deployments/{deployment_id}/drift` & `POST`: List or record drift events.
+- `GET /deployments/{deployment_id}/rollbacks` & `POST`: List or record rollback operations.
+
+---
+
+## 8. CI/CD Pipeline & Automated Deployment (Phase 11)
+
+Phase 11 implements the GitHub Actions automation for continuous integration, Docker image packaging, GitHub Container Registry (GHCR) publishing, and health-verified deployment.
+
+### Pipeline Flow
+
+```text
+git push / PR
+      │
+      ▼
+.github/workflows/ci.yml
+  ├── Python Test Suite (Backend, Worker, CLI, Target Service)
+  ├── Frontend Build (React, Vite, Tailwind)
+  └── Docker Build & Compose Syntax Validation
+      │
+      ▼ (Push to main)
+.github/workflows/deploy.yml
+  ├── Docker Buildx & GHCR Publish
+  │     ├── ghcr.io/<owner>/sceptic-backend:<commit-sha>
+  │     ├── ghcr.io/<owner>/sceptic-worker:<commit-sha>
+  │     ├── ghcr.io/<owner>/sceptic-frontend:<commit-sha>
+  │     └── ghcr.io/<owner>/sceptic-target-service:<commit-sha>
+  ├── Launch Multi-Container Stack (Docker Compose)
+  │     └── Injects COMMIT_SHA, APPLICATION_VERSION, ENVIRONMENT
+  └── Post-Deployment Verification (scripts/deploy.py)
+        ├── Health Probe: GET /health (HTTP 200, status="healthy")
+        ├── Version Check: GET /version (commit_sha match)
+        ├── Database State Update:
+        │     status: DEPLOYING ──► ACTIVE (Success)
+        │     status: DEPLOYING ──► FAILED (Health/Commit Failure)
+        └── Safe Termination (No automatic rollback)
+```
+
+### GitHub Container Registry (GHCR) Configuration
+
+- **Registry**: `ghcr.io`
+- **Authentication**: Uses built-in `secrets.GITHUB_TOKEN`.
+- **Permissions Required**:
+  ```yaml
+  permissions:
+    contents: read
+    packages: write
+  ```
+- **Image Tagging**: Every build publishes immutable commit-SHA tags (`:<commit-sha>`) alongside a moving `:latest` convenience tag. The authoritative deployment identifier is strictly the immutable Git commit SHA.
+
+### Deployment Gate & Verification Runner
+
+The deployment runner [`scripts/deploy.py`](../scripts/deploy.py) handles deployment gating and verification:
+```bash
+python scripts/deploy.py \
+  --project-id "00000000-0000-0000-0000-000000000001" \
+  --commit-sha "abc123456789" \
+  --image-name "ghcr.io/org/sceptic-target-service" \
+  --image-tag "abc123456789" \
+  --environment "production" \
+  --version "1.0.0" \
+  --target-url "http://localhost:8080" \
+  --backend-url "http://localhost:8000" \
+  --timeout 30.0
+```
+
+- **Trust Gate Policy**:
+  - `APPROVE` ($\ge 85$ points): Deployment permitted.
+  - `REQUEST_CHANGES` ($65-84$ points): Deployment halted (`BLOCKED`).
+  - `BLOCK` ($< 65$ points): Deployment halted (`BLOCKED`).
+- **Failure Behavior**: If readiness probes time out or the running commit does not match the expected commit SHA, the deployment record in PostgreSQL is set to `FAILED`. In compliance with Phase 11 boundaries, no automatic rollback is executed.
+
+
