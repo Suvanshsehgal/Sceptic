@@ -417,3 +417,33 @@ Phase 11 introduces GitHub Actions workflows for continuous integration, Docker 
   - Executes deployment gating (`APPROVE` allowed, `BLOCK`/`REQUEST_CHANGES` prevented).
   - Validates container readiness (`/health`), runtime metadata (`/version`), and commit identity.
   - Records final deployment state in PostgreSQL (`DEPLOYING` $\to$ `ACTIVE` or `FAILED`).
+
+---
+
+## Phase 12: Observability Foundation (Prometheus + Grafana)
+
+Phase 12 establishes the foundational timeseries telemetry layer required by future post-deployment agents (such as Pipeline Watchdog).
+
+### Architecture & Capabilities
+- **Prometheus Service (`prom/prometheus:v2.51.0`)**: Scrapes the FastAPI target service every 5 seconds at `target-service:8080/metrics`.
+- **Target Application Instrumentation**:
+  - `GET /metrics`: Standard Prometheus scrapable metrics endpoint.
+  - `http_requests_total`: Request counter tagged with `method`, `endpoint`, and `status_code`.
+  - `http_request_duration_seconds`: Latency histogram with 11 buckets.
+  - `http_requests_in_progress`: In-flight active request gauge.
+  - `target_service_app_info`: Release metadata (`version`, `commit_sha`, `build_timestamp`, `environment`).
+  - `GET /api/fail?code=500`: Simulated failure endpoint for verifying 5xx telemetry response.
+- **Grafana Service (`grafana/grafana:10.4.0`)**:
+  - Automatically provisions Prometheus datasource via internal Docker network (`http://prometheus:9090`).
+  - Automatically loads the **Sceptic - Target Service Observability** dashboard with 8 real panels:
+    - Target Health (Up status)
+    - Total Requests
+    - In-Progress Active Requests
+    - Error Rate %
+    - Release Metadata (Version, SHA, Env)
+    - Request Rate (Throughput)
+    - Response Latency (p95)
+    - HTTP Status Code Distribution
+- **Accessing Observability**:
+  - Prometheus UI: `http://localhost:9090`
+  - Grafana Dashboard: `http://localhost:3000` (Anonymous Viewer enabled)

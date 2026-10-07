@@ -6,7 +6,7 @@ This document describes the multi-container deployment architecture of Sceptic, 
 
 ## 1. Multi-Container Architecture Overview
 
-Sceptic runs as a 6-container topology communicating across an isolated internal bridge network (`sceptic-network` in development, `sceptic-prod-network` in production):
+Sceptic runs as an 8-container topology communicating across an isolated internal bridge network (`sceptic-network` in development, `sceptic-prod-network` in production):
 
 ```text
                            ┌─────────────────────────┐
@@ -34,12 +34,26 @@ Sceptic runs as a 6-container topology communicating across an isolated internal
                    └─────────────┘
 
        ─────────────────────────────────────────────────────
-       INDEPENDENT TARGET FOR DEVOPS VERIFICATION:
+       INDEPENDENT TARGET & OBSERVABILITY FOUNDATION:
        ─────────────────────────────────────────────────────
                    ┌─────────────────────────┐
                    │     Target Service      │
-                   │   (FastAPI / Port 8080) │
-                   │  /health, /version, demo│
+                   │  (FastAPI / Port 8080)  │
+                   │  /health, /version,     │
+                   │  /metrics, /api/fail    │
+                   └────────────┬────────────┘
+                                │ Scrape (every 5s)
+                                ▼
+                   ┌─────────────────────────┐
+                   │       Prometheus        │
+                   │       (Port 9090)       │
+                   └────────────┬────────────┘
+                                │ Query API
+                                ▼
+                   ┌─────────────────────────┐
+                   │         Grafana         │
+                   │       (Port 3000)       │
+                   │ Sceptic Dashboard       │
                    └─────────────────────────┘
 ```
 
@@ -53,6 +67,8 @@ Sceptic runs as a 6-container topology communicating across an isolated internal
 | `redis` | Redis 7 Alpine | `6380:6379` (dev) | Celery task queue broker and result backend |
 | `postgres` | PostgreSQL 15 Alpine | `5432:5432` | Local relational database for audits and users |
 | `target-service` | FastAPI / Python | `8080:8080` | Independent deployment target application |
+| `prometheus` | Prometheus v2.51.0 | `9090:9090` | Timeseries metric scraper and storage engine |
+| `grafana` | Grafana 10.4.0 | `3000:3000` | Automated dashboards and telemetry visualization |
 
 ---
 
@@ -286,5 +302,73 @@ python scripts/deploy.py \
   - `REQUEST_CHANGES` ($65-84$ points): Deployment halted (`BLOCKED`).
   - `BLOCK` ($< 65$ points): Deployment halted (`BLOCKED`).
 - **Failure Behavior**: If readiness probes time out or the running commit does not match the expected commit SHA, the deployment record in PostgreSQL is set to `FAILED`. In compliance with Phase 11 boundaries, no automatic rollback is executed.
+
+---
+
+## 5. Phase 12: Observability Foundation (Prometheus + Grafana)
+
+Phase 12 introduces the foundational timeseries telemetry layer for the Sceptic ecosystem. This foundation provides real runtime metrics to support the future Pipeline Watchdog Agent without premature automation or alerting.
+
+### 5.1 Architecture
+
+```text
+[Incoming Traffic] ──► [Target Service :8080]
+                             │
+                             ├─► /metrics (Prometheus scrapable format)
+                             │     - http_requests_total (method, endpoint, status_code)
+                             │     - http_request_duration_seconds (method, endpoint, buckets)
+                             │     - http_requests_in_progress (method, endpoint)
+                             │     - target_service_app_info (version, commit, build, env)
+                             │
+                             ▼ (Scrape every 5s)
+                       [Prometheus :9090]
+                             │
+                             ▼ (Internal proxy: http://prometheus:9090)
+                       [Grafana :3000]
+                             │
+                             ▼
+              [Sceptic Observability Dashboard]
+```
+
+### 5.2 Metrics Exported by Target Service
+
+All metrics are exposed at `GET /metrics` in standard Prometheus text format:
+
+| Metric Name | Type | Labels | Description |
+| :--- | :--- | :--- | :--- |
+| `http_requests_total` | Counter | `method`, `endpoint`, `status_code` | Total HTTP requests processed, partitioned by status code. |
+| `http_request_duration_seconds` | Histogram | `method`, `endpoint` | Request execution latency with 11 buckets (`0.005s` to `10.0s`). |
+| `http_requests_in_progress` | Gauge | `method`, `endpoint` | Current count of active concurrent requests being processed. |
+| `target_service_app_info` | Gauge | `version`, `commit_sha`, `build_timestamp`, `environment` | Constant value `1` carrying deployment identity metadata. |
+
+### 5.3 Metric Safety & Redaction
+The metrics implementation strictly enforces security boundaries:
+- **Zero Secrets**: No tokens, passwords, API keys, database connection strings, or bearer headers are exposed.
+- **Controlled Label Cardinality**: Endpoint paths are normalized (`/health`, `/version`, `/api/demo`, `/metrics`, `/api/fail`) to prevent memory leaks or cardinality explosion.
+
+### 5.4 Failure Simulation Endpoint
+For observability verification and future drift/watchdog testing, the target service exposes:
+- `GET /api/fail?code=500` (supports `500`, `502`, `503`, `504`): Returns simulated HTTP errors and automatically increments the 5xx status code metrics in `http_requests_total`.
+
+### 5.5 Prometheus Configuration
+Defined in [`infra/prometheus/prometheus.yml`](../infra/prometheus/prometheus.yml):
+- Scrapes the `target-service` container at `target-service:8080/metrics` every 5 seconds.
+- Scrapes self health at `localhost:9090`.
+
+### 5.6 Grafana Provisioning & Dashboard
+- **Datasource**: Automatically provisioned from [`infra/grafana/provisioning/datasources/prometheus.yml`](../infra/grafana/provisioning/datasources/prometheus.yml) targeting `http://prometheus:9090`.
+- **Dashboards Provider**: Automatically provisioned from [`infra/grafana/provisioning/dashboards/dashboards.yml`](../infra/grafana/provisioning/dashboards/dashboards.yml).
+- **Dashboard Definition**: [`infra/grafana/dashboards/definitions/sceptic_observability.json`](../infra/grafana/dashboards/definitions/sceptic_observability.json)
+  - **Panels**:
+    1. **Target Health (Up Status)**: Stat panel showing target reachability.
+    2. **Total Requests**: Stat panel tracking total request count.
+    3. **Active In-Progress Requests**: Stat panel tracking concurrent requests.
+    4. **Error Rate %**: Percentage of requests returning 5xx status codes.
+    5. **Release Metadata**: Displays active Version, Commit SHA, and Environment.
+    6. **Request Rate (Throughput)**: Time series graph of requests per second.
+    7. **Response Latency (p95)**: Time series graph tracking 95th percentile response times.
+    8. **HTTP Status Code Distribution**: Bar chart displaying breakdown of 2xx, 4xx, and 5xx responses.
+- **Access**: Open `http://localhost:3000` (Anonymous Viewer enabled for instant access).
+
 
 
