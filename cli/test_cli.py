@@ -189,3 +189,32 @@ def test_cli_audit_verbose_flag(sample_clean_code):
         assert result.exit_code == EXIT_AUDIT_FAILURE
         assert "Finding Evidence Snippets" in result.stdout
         assert "Call signature: func(foo=1)" in result.stdout
+
+
+def test_cli_interactive_dashboard_exit():
+    """Verify invoking sceptic without arguments opens the interactive dashboard box and handles exit."""
+    result = runner.invoke(app, [], input="0\n")
+    assert result.exit_code == 0
+    assert "SCEPTIC" in result.stdout
+    assert "Login" in result.stdout
+    assert "Goodbye!" in result.stdout
+
+
+def test_cli_login_help():
+    """Verify sceptic login --help shows options for email, password, google, mock-email."""
+    result = runner.invoke(app, ["login", "--help"])
+    assert result.exit_code == 0
+    assert "--email" in result.stdout
+    assert "--password" in result.stdout
+    assert "--google" in result.stdout
+
+
+def test_cli_register_help():
+    """Verify sceptic register --help shows options for name, email, and password."""
+    result = runner.invoke(app, ["register", "--help"])
+    assert result.exit_code == 0
+    assert "--name" in result.stdout
+    assert "--email" in result.stdout
+    assert "--password" in result.stdout
+
+
