@@ -38,11 +38,17 @@ celery_app.conf.update(
 )
 
 @celery_app.task(name="execute_audit_pipeline", bind=True)
-def execute_audit_pipeline(self, audit_run_id: int, payload: dict):
+def execute_audit_pipeline(self, audit_run_id, payload: dict):
     """
     Asynchronous Celery task processing an audit run.
     """
     logger.info(f"Task started for AuditRun ID: {audit_run_id}")
+    import uuid as uuid_pkg
+    if isinstance(audit_run_id, str):
+        try:
+            audit_run_id = uuid_pkg.UUID(audit_run_id)
+        except Exception:
+            pass
     db = SessionLocal()
     try:
         audit_run = db.query(models.AuditRun).filter(models.AuditRun.id == audit_run_id).first()
@@ -77,6 +83,12 @@ def execute_audit_pipeline(self, audit_run_id: int, payload: dict):
 
         # Persist AgentFindings
         for f in report.get("all_findings", []):
+            evidence_val = f.get("evidence")
+            if not evidence_val:
+                evidence_val = {"contextual_analysis": str(f.get("contextual_analysis") or "")}
+            elif isinstance(evidence_val, str):
+                evidence_val = {"detail": evidence_val}
+
             agent_finding = models.AgentFinding(
                 audit_run_id=audit_run.id,
                 agent_name=f.get("agent_name", "Unknown-Agent"),
@@ -85,7 +97,8 @@ def execute_audit_pipeline(self, audit_run_id: int, payload: dict):
                 description=f.get("description", ""),
                 file_path=f.get("file_path", file_path),
                 line_number=f.get("line_number"),
-                evidence=f.get("evidence") or str(f.get("contextual_analysis") or "")
+                evidence=evidence_val,
+                recommendation=f.get("recommendation", "")
             )
             db.add(agent_finding)
 

@@ -22,30 +22,40 @@ from orchestrator import AuditOrchestrator
 from blind_tester import SpecificationMetadata
 import celery_app
 
-# SQLite test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_phase5.db"
-test_engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+import asyncio
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# SQLite test databases (async for FastAPI, sync for Celery task)
+TEST_ASYNC_DB_URL = "sqlite+aiosqlite:///./test_phase5.db"
+TEST_SYNC_DB_URL = "sqlite:///./test_phase5.db"
 
-client = TestClient(app)
+test_async_engine = create_async_engine(TEST_ASYNC_DB_URL, echo=False)
+AsyncTestingSessionLocal = async_sessionmaker(
+    bind=test_async_engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
+
+test_sync_engine = create_engine(TEST_SYNC_DB_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_sync_engine)
+
+async def override_get_db():
+    async with AsyncTestingSessionLocal() as session:
+        yield session
 
 @pytest.fixture(autouse=True)
 def setup_test_db():
-    Base.metadata.create_all(bind=test_engine)
+    Base.metadata.create_all(bind=test_sync_engine)
     app.dependency_overrides[get_db] = override_get_db
     orig_session = celery_app.SessionLocal
     celery_app.SessionLocal = TestingSessionLocal
     yield
     celery_app.SessionLocal = orig_session
     app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(bind=test_engine)
+    Base.metadata.drop_all(bind=test_sync_engine)
     if os.path.exists("./test_phase5.db"):
         try:
             os.remove("./test_phase5.db")
@@ -133,11 +143,16 @@ def test_blind_tester_information_isolation_preserved_in_orchestration():
 
 def test_celery_task_success_updates_audit_run():
     db = TestingSessionLocal()
-    pr = models.PullRequest(repository_full_name="org/repo", pr_number=10, commit_sha="sha123")
+    pr = models.PullRequest(repository="org/repo", pr_number=10, latest_commit_sha="sha123")
     db.add(pr)
     db.commit()
 
-    audit_run = models.AuditRun(pull_request_id=pr.id, status="PENDING")
+    audit_run = models.AuditRun(
+        pull_request_id=pr.id,
+        commit_sha="sha123",
+        idempotency_key="org/repo#10@sha123",
+        status="PENDING"
+    )
     db.add(audit_run)
     db.commit()
     audit_id = audit_run.id
@@ -167,11 +182,16 @@ def test_celery_task_success_updates_audit_run():
 
 def test_celery_task_failure_updates_audit_run():
     db = TestingSessionLocal()
-    pr = models.PullRequest(repository_full_name="org/repo", pr_number=11, commit_sha="sha999")
+    pr = models.PullRequest(repository="org/repo", pr_number=11, latest_commit_sha="sha999")
     db.add(pr)
     db.commit()
 
-    audit_run = models.AuditRun(pull_request_id=pr.id, status="PENDING")
+    audit_run = models.AuditRun(
+        pull_request_id=pr.id,
+        commit_sha="sha999",
+        idempotency_key="org/repo#11@sha999",
+        status="PENDING"
+    )
     db.add(audit_run)
     db.commit()
     audit_id = audit_run.id
@@ -193,13 +213,16 @@ def test_celery_task_failure_updates_audit_run():
 # D & E. WEBHOOK VALIDATION, QUEUING & IDEMPOTENCY
 # ========================================================
 
-def test_webhook_invalid_payload_rejected():
-    # Missing repository, pr_number, commit_sha
-    resp = client.post("/webhook", json={"invalid": "payload"})
-    assert resp.status_code == 400
-    assert "Missing required fields" in resp.json()["detail"]
+@pytest.mark.anyio
+async def test_webhook_invalid_payload_rejected():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post("/webhook", json={"invalid": "payload"})
+        assert resp.status_code == 400
+        assert "Missing required fields" in resp.json()["detail"]
 
-def test_webhook_valid_payload_accepted():
+@pytest.mark.anyio
+async def test_webhook_valid_payload_accepted():
     payload = {
         "repository": "facebook/react",
         "pr_number": 101,
@@ -207,13 +230,16 @@ def test_webhook_valid_payload_accepted():
         "branch_name": "feature-x"
     }
     with patch("main.execute_audit_pipeline.delay", return_value=MagicMock(id="celery-mock-id")):
-        resp = client.post("/webhook", json=payload)
-        assert resp.status_code == 202
-        data = resp.json()
-        assert data["status"] == "QUEUED"
-        assert "audit_run_id" in data
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/webhook", json=payload)
+            assert resp.status_code == 202
+            data = resp.json()
+            assert data["status"] == "QUEUED"
+            assert "audit_run_id" in data
 
-def test_webhook_idempotency_prevents_duplicate_audits():
+@pytest.mark.anyio
+async def test_webhook_idempotency_prevents_duplicate_audits():
     payload = {
         "repository": "pallets/flask",
         "pr_number": 42,
@@ -221,23 +247,26 @@ def test_webhook_idempotency_prevents_duplicate_audits():
         "branch_name": "main"
     }
     with patch("main.execute_audit_pipeline.delay", return_value=MagicMock(id="mock-1")):
-        # First request
-        resp1 = client.post("/webhook", json=payload)
-        assert resp1.status_code == 202
-        audit_id_1 = resp1.json()["audit_run_id"]
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            # First request
+            resp1 = await ac.post("/webhook", json=payload)
+            assert resp1.status_code == 202
+            audit_id_1 = resp1.json()["audit_run_id"]
 
-        # Second request with exact same repository, PR, and commit_sha
-        resp2 = client.post("/webhook", json=payload)
-        assert resp2.status_code == 200
-        data2 = resp2.json()
-        assert data2["status"] == "ALREADY_EXISTS"
-        assert data2["audit_run_id"] == audit_id_1
+            # Second request with exact same repository, PR, and commit_sha
+            resp2 = await ac.post("/webhook", json=payload)
+            assert resp2.status_code == 200
+            data2 = resp2.json()
+            assert data2["status"] == "ALREADY_EXISTS"
+            assert data2["audit_run_id"] == audit_id_1
 
 # ========================================================
 # F & G. COMPLETE END-TO-END FLOW
 # ========================================================
 
-def test_complete_end_to_end_flow():
+@pytest.mark.anyio
+async def test_complete_end_to_end_flow():
     """
     Webhook -> AuditRun -> Celery -> CrewAI Orchestration -> DB Persistence
     """
@@ -252,24 +281,27 @@ def test_complete_end_to_end_flow():
         "specification": "Must return os.path.join(a, b)."
     }
 
-    # 1. Send Webhook (mocking async broker dispatch so test is deterministic and fast)
+    # 1. Send Webhook
     with patch("main.execute_audit_pipeline.delay", return_value=MagicMock(id="task-mock-123")):
-        resp = client.post("/webhook", json=payload)
-        assert resp.status_code == 202
-        audit_run_id = resp.json()["audit_run_id"]
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/webhook", json=payload)
+            assert resp.status_code == 202
+            audit_run_id = resp.json()["audit_run_id"]
 
     # 2. Run Celery execution
     task_res = celery_app.execute_audit_pipeline(audit_run_id, payload)
     assert task_res["status"] == "COMPLETED"
 
     # 3. Verify Database Persistence via API
-    resp_audits = client.get("/audits")
-    assert resp_audits.status_code == 200
-    audits = resp_audits.json()
-    matching = [a for a in audits if a["id"] == audit_run_id]
-    assert len(matching) == 1
-    audit_data = matching[0]
-    assert audit_data["status"] == "COMPLETED"
-    assert audit_data["trust_score"] is not None
-    assert audit_data["recommendation"] in ["APPROVE", "REQUEST_CHANGES", "BLOCK"]
-    assert len(audit_data["findings"]) > 0
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp_audits = await ac.get("/audits")
+        assert resp_audits.status_code == 200
+        audits = resp_audits.json()
+        matching = [a for a in audits if str(a["id"]) == str(audit_run_id)]
+        assert len(matching) == 1
+        audit_data = matching[0]
+        assert audit_data["status"] == "COMPLETED"
+        assert audit_data["trust_score"] is not None
+        assert audit_data["recommendation"] in ["APPROVE", "REQUEST_CHANGES", "BLOCK"]
+        assert len(audit_data["findings"]) > 0
