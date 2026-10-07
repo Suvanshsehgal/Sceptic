@@ -37,6 +37,7 @@ from auth import (
     verify_password,
     GOOGLE_CLIENT_ID
 )
+from feature_scoper import evaluate_feature_proposal
 
 try:
     from celery_app import execute_audit_pipeline
@@ -88,7 +89,9 @@ async def health_check():
     """General health check endpoint."""
     return {
         "status": "ok",
-        "message": "Backend is reachable"
+        "message": "Backend is reachable",
+        "database_status": "Connected (PostgreSQL)",
+        "redis_configured": bool(os.getenv("REDIS_URL") or os.getenv("CELERY_BROKER_URL"))
     }
 
 
@@ -573,35 +576,24 @@ async def create_feature_analysis(
 
     desc = analysis_in.feature_description
 
-    # Calculate deterministic architecture scores based on feature scope
-    feasibility = 88.0
-    complexity = 45.0
-    risk = 25.0
-    confidence = 92.0
-
-    analysis_text = (
-        f"Feature proposal: '{desc}' evaluated for project '{project.name}'.\n"
-        "Architectural assessment: Clean integration possible without modifying existing verification pipeline.\n"
-        "Security impact: Minimal attack surface expansion; requires standard CSRF and session validations."
-    )
-
-    plan_text = (
-        f"1. Define domain models and persistence schemas for {desc}.\n"
-        "2. Implement backend service and authenticated API endpoints.\n"
-        "3. Wire CLI command handlers with Rich output formatting.\n"
-        "4. Add unit and regression test coverage."
+    # Dynamic evaluation using Groq LLM (openai/gpt-oss-120b) or semantic fallback
+    eval_result = await evaluate_feature_proposal(
+        feature_description=desc,
+        project_name=project.name,
+        project_description=project.description,
+        repository_url=project.repository_url
     )
 
     analysis_record = models.FeatureAnalysis(
         project_id=project.id,
         user_id=current_user.id,
         feature_description=desc,
-        feasibility_score=feasibility,
-        complexity_score=complexity,
-        risk_score=risk,
-        confidence_score=confidence,
-        analysis=analysis_text,
-        implementation_plan=plan_text
+        feasibility_score=eval_result["feasibility_score"],
+        complexity_score=eval_result["complexity_score"],
+        risk_score=eval_result["risk_score"],
+        confidence_score=eval_result["confidence_score"],
+        analysis=eval_result["analysis"],
+        implementation_plan=eval_result["implementation_plan"]
     )
 
     db.add(analysis_record)

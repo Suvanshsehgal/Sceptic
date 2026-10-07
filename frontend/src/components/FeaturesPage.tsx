@@ -164,6 +164,15 @@ export const FeaturesPage: React.FC = () => {
             </div>
           </div>
 
+          {selectedAnalysis.analysis && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Architectural Assessment</h4>
+              <div className="p-4 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 whitespace-pre-line leading-relaxed font-sans">
+                {selectedAnalysis.analysis}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Implementation Plan</h4>
             <div className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-line leading-relaxed">
