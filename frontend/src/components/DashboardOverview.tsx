@@ -16,7 +16,7 @@ import {
 import { AuditRun } from '../types';
 
 interface DashboardOverviewProps {
-  onSelectAudit: (id: number) => void;
+  onSelectAudit: (id: number | string) => void;
   onNavigateTab: (tab: string) => void;
 }
 
@@ -236,9 +236,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       <td className="py-3 px-4">
                         {pr ? (
                           <div className="font-sans">
-                            <span className="font-medium text-slate-200">{pr.repository_full_name}</span>
+                            <span className="font-medium text-slate-200">{pr.repository || pr.repository_full_name || 'Project Audit'}</span>
                             <span className="text-slate-400 text-[11px] block font-mono">
-                              PR #{pr.pr_number} ({pr.commit_sha.substring(0, 7)})
+                              PR #{pr.pr_number || 1} ({String(pr.latest_commit_sha || pr.commit_sha || audit.commit_sha || 'local').substring(0, 7)})
                             </span>
                           </div>
                         ) : (

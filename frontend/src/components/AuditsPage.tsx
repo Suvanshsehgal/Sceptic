@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 interface AuditsPageProps {
-  onSelectAudit: (id: number) => void;
+  onSelectAudit: (id: number | string) => void;
 }
 
 export const AuditsPage: React.FC<AuditsPageProps> = ({ onSelectAudit }) => {
@@ -32,9 +32,9 @@ export const AuditsPage: React.FC<AuditsPageProps> = ({ onSelectAudit }) => {
 
   const filteredAudits = allAudits.filter((audit) => {
     const matchesStatus = statusFilter === 'ALL' || audit.status === statusFilter;
-    const repo = audit.pull_request?.repository_full_name || '';
+    const repo = audit.pull_request?.repository || audit.pull_request?.repository_full_name || '';
     const prNum = audit.pull_request?.pr_number?.toString() || '';
-    const sha = audit.pull_request?.commit_sha || '';
+    const sha = audit.pull_request?.latest_commit_sha || audit.pull_request?.commit_sha || audit.commit_sha || '';
     const idStr = audit.id.toString();
 
     const matchesSearch = 
@@ -137,14 +137,14 @@ export const AuditsPage: React.FC<AuditsPageProps> = ({ onSelectAudit }) => {
                     >
                       <td className="py-3.5 px-4 font-bold text-white">#{audit.id}</td>
                       <td className="py-3.5 px-4 font-sans font-medium text-slate-200">
-                        {pr ? pr.repository_full_name : 'Local / CLI Execution'}
+                        {pr ? (pr.repository || pr.repository_full_name || 'Project Audit') : 'Local / CLI Execution'}
                       </td>
                       <td className="py-3.5 px-4">
                         {pr ? (
                           <div className="flex items-center gap-1.5 text-slate-300">
                             <GitPullRequest className="h-3.5 w-3.5 text-slate-400" />
-                            <span>#{pr.pr_number}</span>
-                            <span className="text-slate-400 text-[11px]">({pr.commit_sha.substring(0, 7)})</span>
+                            <span>#{pr.pr_number || 1}</span>
+                            <span className="text-slate-400 text-[11px]">({String(pr.latest_commit_sha || pr.commit_sha || audit.commit_sha || 'local').substring(0, 7)})</span>
                           </div>
                         ) : (
                           <span className="text-slate-400 italic font-sans">-</span>
