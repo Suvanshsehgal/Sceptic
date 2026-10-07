@@ -131,3 +131,51 @@ async def test_get_audit_by_id():
         random_uuid = str(uuid.uuid4())
         res_not_found = await client.get(f"/audits/{random_uuid}")
         assert res_not_found.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_auth_register_and_login_success():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Register new user
+        reg_resp = await client.post("/auth/register", json={
+            "name": "Alice Developer",
+            "email": "alice@example.com",
+            "password": "supersecretpassword123"
+        })
+        assert reg_resp.status_code == 201
+        reg_data = reg_resp.json()
+        assert "access_token" in reg_data
+        assert reg_data["user"]["email"] == "alice@example.com"
+        assert reg_data["user"]["name"] == "Alice Developer"
+
+        # 2. Login with correct password
+        login_resp = await client.post("/auth/login", json={
+            "email": "alice@example.com",
+            "password": "supersecretpassword123"
+        })
+        assert login_resp.status_code == 200
+        token = login_resp.json()["access_token"]
+
+        # 3. Access /auth/me with Bearer token
+        me_resp = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert me_resp.status_code == 200
+        assert me_resp.json()["email"] == "alice@example.com"
+
+
+@pytest.mark.anyio
+async def test_auth_invalid_password():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post("/auth/register", json={
+            "name": "Bob Tester",
+            "email": "bob@example.com",
+            "password": "correctpassword123"
+        })
+        # Try wrong password
+        login_resp = await client.post("/auth/login", json={
+            "email": "bob@example.com",
+            "password": "wrongpassword"
+        })
+        assert login_resp.status_code == 401
+
