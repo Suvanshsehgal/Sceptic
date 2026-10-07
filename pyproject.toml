@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sceptic"
+version = "0.1.0"
+description = "Sceptic: Independent AI-Generated Code Verification System"
+readme = "Readme.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "fastapi",
+    "sqlalchemy",
+    "alembic",
+    "pydantic"
+]
+
+[project.scripts]
+sceptic = "cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*", "worker*", "backend*"]

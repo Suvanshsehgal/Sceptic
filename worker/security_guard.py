@@ -47,7 +47,18 @@ class BanditScanner:
                 f.write(source_code)
 
             try:
-                cmd = ["bandit", "-f", "json", "-q", file_path]
+                import shutil
+                bandit_bin = shutil.which("bandit")
+                if not bandit_bin:
+                    # Check in virtual environment Scripts folder
+                    scripts_dir = os.path.dirname(sys.executable)
+                    candidate = os.path.join(scripts_dir, "bandit.exe" if os.name == "nt" else "bandit")
+                    if os.path.exists(candidate):
+                        bandit_bin = candidate
+                    else:
+                        bandit_bin = "bandit"
+
+                cmd = [bandit_bin, "-f", "json", "-q", file_path]
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -132,7 +143,15 @@ class SemgrepScanner:
 
             try:
                 import shutil
-                semgrep_bin = shutil.which("semgrep") or "semgrep"
+                semgrep_bin = shutil.which("semgrep")
+                if not semgrep_bin:
+                    scripts_dir = os.path.dirname(sys.executable)
+                    candidate = os.path.join(scripts_dir, "semgrep.exe" if os.name == "nt" else "semgrep")
+                    if os.path.exists(candidate):
+                        semgrep_bin = candidate
+                    else:
+                        semgrep_bin = "semgrep"
+
                 cmd = [semgrep_bin, "scan", "--config", self.rules_path, "--json", "--no-git-ignore", file_path]
                 proc = subprocess.run(
                     cmd,
