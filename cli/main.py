@@ -555,14 +555,21 @@ def history():
     api_url = CLIConfig.get_api_url()
     headers = {"Authorization": f"Bearer {token}"}
 
-    with httpx.Client(timeout=5.0) as client:
-        # Fetch audits
-        a_resp = client.get(f"{api_url}/projects/{active['id']}/audits", headers=headers)
-        # Fetch feature analyses
-        f_resp = client.get(f"{api_url}/projects/{active['id']}/feature-analyses", headers=headers)
+    audits = []
+    analyses = []
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            # Fetch audits
+            a_resp = client.get(f"{api_url}/projects/{active['id']}/audits", headers=headers)
+            # Fetch feature analyses
+            f_resp = client.get(f"{api_url}/projects/{active['id']}/feature-analyses", headers=headers)
 
-    audits = a_resp.json() if a_resp.status_code == 200 else []
-    analyses = f_resp.json() if f_resp.status_code == 200 else []
+            if a_resp.status_code == 200:
+                audits = a_resp.json()
+            if f_resp.status_code == 200:
+                analyses = f_resp.json()
+    except Exception as e:
+        console.print(f"[dim yellow]Warning: Could not refresh history from backend ({e})[/dim yellow]")
 
     console.print(f"[bold cyan]Project History: {active['name']}[/bold cyan]\n")
 
@@ -746,6 +753,32 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
 
     _display_rich_report(report, verbose=verbose)
 
+    # Sync audit run with backend and active project
+    token = AuthManager.get_token()
+    active = CLIConfig.get_active_project()
+    api_url = CLIConfig.get_api_url()
+
+    if token and active:
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                sync_resp = client.post(
+                    f"{api_url}/projects/{active['id']}/audits",
+                    json={
+                        "target_path": str(path),
+                        "trust_score": float(report.get("trust_score", 0.0)),
+                        "summary": str(report.get("summary", "")),
+                        "recommendation": str(report.get("recommendation", "UNKNOWN")),
+                        "commit_sha": "cli-local",
+                        "findings": report.get("findings", [])
+                    },
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if sync_resp.status_code in (200, 201):
+                    console.print(f"\n[bold green]✓ Audit results successfully synced to '{active['name']}' in Web Dashboard![/bold green]")
+                    console.print(f"[dim]View live at: http://localhost:5173 (Audits & Dashboard)[/dim]\n")
+        except Exception:
+            pass
+
     if report.get("recommendation") in ("BLOCK", "REQUEST_CHANGES") or report.get("trust_score", 100) < 80:
         return EXIT_AUDIT_FAILURE
     return EXIT_SUCCESS
@@ -831,26 +864,33 @@ def _display_rich_report(report: dict, verbose: bool = False):
     )
     console.print(sev_table)
 
-    # 4. Detailed Findings Table
+    # 4. Detailed Findings Table (Filtered to meaningful issues to avoid noise)
     findings = report.get("findings", [])
-    if findings:
-        f_table = Table(title="Finding Evidence Snippets", border_style="yellow")
+    actionable = [f for f in findings if (f.get("severity") or "INFO").upper() in ("CRITICAL", "HIGH", "MEDIUM", "LOW")]
+    displayed = actionable if actionable else [f for f in findings if not (isinstance(f.get("evidence"), dict) and "called_api" in f.get("evidence", {}))]
+
+    if displayed:
+        f_table = Table(title="Key Verification Findings", border_style="yellow")
         f_table.add_column("Agent", style="cyan")
         f_table.add_column("Severity")
         f_table.add_column("Title", style="bold")
         f_table.add_column("Location", style="dim")
-        f_table.add_column("Evidence", no_wrap=True)
+        f_table.add_column("Evidence", max_width=45)
 
-        for f in findings:
-            sev = f.get("severity", "INFO")
-            col = "red" if sev in ("CRITICAL", "HIGH") else "yellow" if sev == "MEDIUM" else "dim"
+        for f in displayed[:15]:
+            sev = (f.get("severity") or "INFO").upper()
+            col = "red" if sev in ("CRITICAL", "HIGH") else "yellow" if sev == "MEDIUM" else "cyan" if sev == "LOW" else "dim"
             loc = f"{f.get('file_path', 'target')}:{f.get('line_number') or '-'}"
             ev = str(f.get("evidence", ""))
-            f_table.add_row(f.get("agent_name"), f"[{col}]{sev}[/{col}]", f.get("title", ""), loc, ev)
+            if len(ev) > 50:
+                ev = ev[:47] + "..."
+            f_table.add_row(f.get("agent_name"), f"[{col}]{sev}[/{col}]", str(f.get("title", ""))[:45], loc, ev)
 
         console.print(f_table)
+        if len(displayed) > 15:
+            console.print(f"[dim]Showing top 15 of {len(displayed)} findings. Full details available in Web Dashboard.[/dim]")
     elif findings:
-        console.print(f"\n[dim]Note: {len(findings)} findings recorded. Pass '--verbose' to view full trace.[/dim]\n")
+        console.print(f"[dim]✓ All {len(findings)} symbols and API calls verified successfully with 0 defects.[/dim]")
 
 
 # ========================================================

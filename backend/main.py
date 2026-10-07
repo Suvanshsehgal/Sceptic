@@ -2,6 +2,8 @@ import os
 import sys
 import logging
 import secrets
+import uuid
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from uuid import UUID
@@ -437,6 +439,111 @@ async def list_project_audits(
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@app.post("/projects/{project_id}/audits", response_model=schemas.AuditRunResponse, status_code=status.HTTP_201_CREATED)
+async def create_cli_audit(
+    project_id: UUID,
+    payload: schemas.CLIAuditSubmission,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Save an in-process CLI verification audit run and findings to PostgreSQL."""
+    # 1. Verify project ownership
+    stmt_p = select(models.Project).filter(
+        models.Project.id == project_id,
+        models.Project.user_id == current_user.id
+    )
+    res_p = await db.execute(stmt_p)
+    project = res_p.scalars().first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # 2. Get or create a PullRequest record for CLI audits in this project
+    repo_name = project.name.replace(" ", "-").lower()
+    stmt_pr = select(models.PullRequest).filter(
+        models.PullRequest.project_id == project_id,
+        models.PullRequest.repository == repo_name
+    ).order_by(models.PullRequest.created_at.desc())
+    res_pr = await db.execute(stmt_pr)
+    pr = res_pr.scalars().first()
+
+    if not pr:
+        pr = models.PullRequest(
+            project_id=project_id,
+            repository=repo_name,
+            pr_number=1,
+            title=f"CLI Audit: {project.name}",
+            description=f"Automated CLI audits for {project.name}",
+            latest_commit_sha=payload.commit_sha or "cli-head",
+            author=current_user.name
+        )
+        db.add(pr)
+        await db.commit()
+        await db.refresh(pr)
+
+    # 3. Create completed AuditRun
+    now = datetime.now(timezone.utc)
+    idempotency_key = f"cli_{uuid.uuid4().hex[:12]}"
+    audit_run = models.AuditRun(
+        pull_request_id=pr.id,
+        commit_sha=payload.commit_sha or "cli-head",
+        status="COMPLETED",
+        trust_score=payload.trust_score,
+        summary=payload.summary or f"CLI verification completed with trust score {payload.trust_score:.1f}%",
+        recommendation=payload.recommendation or "APPROVE",
+        idempotency_key=idempotency_key,
+        created_at=now,
+        started_at=now,
+        completed_at=now
+    )
+    db.add(audit_run)
+    await db.commit()
+    await db.refresh(audit_run)
+
+    # 4. Add findings
+    for f in payload.findings:
+        agent_name = f.get("agent_name") or f.get("agent") or "verifier"
+        sev = (f.get("severity") or "INFO").upper()
+        title = f.get("title") or f.get("message") or f.get("called_api") or "Verification finding"
+        desc = f.get("description") or str(f.get("evidence", ""))
+        fp = f.get("file_path") or payload.target_path
+        ln = f.get("line_number")
+        ev = f.get("evidence")
+        if isinstance(ev, (dict, list)):
+            ev_data = ev
+        elif ev is not None:
+            ev_data = {"raw": str(ev)}
+        else:
+            ev_data = None
+
+        finding_rec = models.AgentFinding(
+            audit_run_id=audit_run.id,
+            agent_name=agent_name,
+            severity=sev,
+            status="OPEN",
+            title=str(title)[:500],
+            description=desc,
+            file_path=str(fp)[:1000] if fp else None,
+            line_number=ln if isinstance(ln, int) else None,
+            evidence=ev_data,
+            recommendation=f.get("recommendation")
+        )
+        db.add(finding_rec)
+
+    await db.commit()
+
+    # Re-fetch with relationships loaded
+    stmt_full = (
+        select(models.AuditRun)
+        .options(
+            selectinload(models.AuditRun.pull_request),
+            selectinload(models.AuditRun.findings)
+        )
+        .filter(models.AuditRun.id == audit_run.id)
+    )
+    res_full = await db.execute(stmt_full)
+    return res_full.scalars().first()
 
 
 # ========================================================

@@ -201,3 +201,12 @@ class PullRequestResponse(PullRequestBase):
     audit_runs: List[AuditRunResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CLIAuditSubmission(BaseModel):
+    target_path: str
+    trust_score: float
+    summary: Optional[str] = None
+    recommendation: Optional[str] = "UNKNOWN"
+    commit_sha: Optional[str] = "cli-local"
+    findings: List[Dict[str, Any]] = []
