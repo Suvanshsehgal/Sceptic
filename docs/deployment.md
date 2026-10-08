@@ -370,5 +370,129 @@ Defined in [`infra/prometheus/prometheus.yml`](../infra/prometheus/prometheus.ym
     8. **HTTP Status Code Distribution**: Bar chart displaying breakdown of 2xx, 4xx, and 5xx responses.
 - **Access**: Open `http://localhost:3000` (Anonymous Viewer enabled for instant access).
 
+---
+
+## 6. Phase 13: Pipeline Watchdog + Deployment Gatekeeper
+
+Phase 13 establishes post-deployment verification by separating runtime behavior monitoring from deployment artifact integrity verification.
+
+```text
+                    DEPLOYED SERVICE
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+         Prometheus               /health /version
+              │                         │
+              └────────────┬────────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+        WATCHDOG AGENT             GATEKEEPER
+              │                         │
+        Runtime Health             Deployment
+        Verification               Integrity
+              │                         │
+              └────────────┬────────────┘
+                           │
+                           ▼
+                  Structured Findings
+                           │
+                           ▼
+                      PostgreSQL
+            (TelemetrySnapshots & DriftEvents)
+                           │
+                           ▼
+                 FUTURE ROLLBACK PHASE
+```
+
+### 6.1 Pipeline Watchdog
+- **Responsibility**: Runtime behavior & performance verification.
+- **Inputs**: Deployment ID, target `/health`, Prometheus metrics (`http_requests_total`, `http_request_duration_seconds`).
+- **Verifications**:
+  1. **Service Health**: Validates `/health` returns HTTP 200 and `status == "healthy"`. Produces `HEALTH_FAILURE` if down.
+  2. **Error Rate**: Queries Prometheus for 5xx errors vs total requests. Enforces `WATCHDOG_MIN_REQUESTS` sample protection before triggering `HIGH_ERROR_RATE` to prevent false positives on small sample sizes.
+  3. **Latency**: Queries p95 latency via Prometheus histogram quantiles. Produces `HIGH_LATENCY` if p95 exceeds threshold. Returns `UNRESOLVED` if histogram buckets are empty (never invents fake latency).
+  4. **Prometheus Availability**: Produces `METRIC_UNAVAILABLE` and `UNRESOLVED` status if Prometheus is unreachable. Never silently passes on telemetry outages.
+  5. **Deployment Correlation**: Produces `DEPLOYMENT_CORRELATED_ANOMALY` when degradation is detected following a deployment timestamp.
+  6. **Persistence**: Saves real observations to `telemetry_snapshots` table.
+
+### 6.2 Deployment Gatekeeper
+- **Responsibility**: Deterministic deployment identity and configuration drift verification.
+- **Inputs**: Deployment record vs target `/version` and `/health`.
+- **Verifications**:
+  1. **Commit SHA**: Compares expected deployment commit against running commit. Produces `COMMIT_MISMATCH`.
+  2. **Application Version**: Compares expected version against `/version`. Produces `VERSION_MISMATCH`.
+  3. **Environment**: Compares expected environment against running environment. Produces `ENVIRONMENT_MISMATCH`.
+  4. **Image Identity**: Compares image digest if available; returns `UNRESOLVED` if runtime digest is unavailable (never fakes PASS).
+  5. **Deployment State Alignment**: Flags `DEPLOYMENT_STATE_MISMATCH` if database status is `ACTIVE` but runtime service is unreachable or unaligned.
+  6. **Idempotent Drift Persistence**: Saves detected drift into `drift_events` table only if an identical unresolved drift event is not already active.
+
+### 6.3 Absolute No-Rollback Boundary
+Neither Pipeline Watchdog nor Gatekeeper may stop, restart, replace, rollback, or alter any container, code, or deployment. They are strictly read-only verification agents that record structured observations into PostgreSQL.
+
+### 6.4 API Endpoints
+- `POST /deployments/{id}/watchdog/check`: Runs Watchdog verification and saves telemetry snapshot.
+- `POST /deployments/{id}/gatekeeper/check`: Runs Gatekeeper integrity verification and saves drift events.
+- `GET /deployments/{id}/telemetry`: Retrieves historical telemetry snapshots.
+- `GET /deployments/{id}/drift-events`: Retrieves recorded drift events.
+
+---
+
+## 7. Rollback Agent — Deployment Recovery Engine (Phase 15)
+
+The Sceptic Rollback Agent is responsible for safe, idempotent, and auditable deployment recovery when runtime degradation or integrity drift is detected.
+
+### 7.1 Absolute Safety Principles
+Rollback operations modify running infrastructure and must never execute blindly. The Rollback Agent enforces mandatory pre-flight safety checks:
+1. **Decision Justification**: Validates that deployment is not already in `ROLLED_BACK` state and a meaningful operational reason is provided.
+2. **Previous Known-Good Discovery**:
+   - Locates target deployment via explicit user selection, recorded `previous_deployment_id`, or chronological database search for the most recent preceding non-failed deployment.
+   - Strictly verifies the target deployment belongs to the same project and is not the current deployment.
+3. **Pre-Flight Safety Verifications**:
+   - `target_deployment_valid`: Valid target exists in same project.
+   - `environment_compatibility`: Target deployment environment must match current deployment environment (prevents staging images in production).
+   - `image_availability`: Target image repository and tag must be valid and non-empty.
+   - `database_migration_safety`: Verifies database schema compatibility. Flags unsafe downgrades unless overridden via `allow_unsafe_migration=True`.
+   - `rollback_lock`: Concurrency guard ensuring no other rollback is currently `IN_PROGRESS` or `PENDING` on this project.
+4. **Abort Guard**: If ANY safety check fails:
+   - Rollback execution halts immediately.
+   - An `ABORTED` record is persisted in `rollback_records` with detailed checklist results.
+   - No modifications to running services are permitted.
+
+### 7.2 Post-Rollback Verification
+When safety checks pass and the rollback lock is acquired:
+1. Execution is dispatched to the recovery executor.
+2. The agent waits for service stabilization (`ROLLBACK_HEALTH_TIMEOUT`).
+3. Probes `GET /health` to verify HTTP 200 and healthy status.
+4. Probes `GET /version` to verify runtime `commit_sha` matches the expected target deployment commit.
+5. If verification succeeds:
+   - Current deployment status updated to `ROLLED_BACK`.
+   - Target deployment status updated to `ACTIVE`.
+   - Active drift events on the deployment are resolved (`resolved_at = now()`).
+   - `RollbackRecord` updated to `SUCCESS`.
+6. If verification fails:
+   - Deployment status marked `FAILED`.
+   - `RollbackRecord` updated to `FAILED` with detailed diagnostic error message.
+
+### 7.3 API Endpoints
+- `POST /deployments/{id}/rollback`: Executes controlled recovery workflow.
+- `POST /deployments/{id}/rollback/check`: Evaluates pre-flight safety checks without executing rollback (dry run).
+- `GET /deployments/{id}/rollbacks`: Lists all historical rollback records and safety checklists.
+
+### 7.4 CLI Usage
+```bash
+# Pre-flight safety check (dry run)
+sceptic rollback <deployment_id> --dry-run
+
+# Execute safe rollback
+sceptic rollback <deployment_id> --reason "Watchdog detected high error rate"
+
+# Rollback to specific target deployment
+sceptic rollback <deployment_id> --target <target_deployment_id>
+```
+
+
 
 

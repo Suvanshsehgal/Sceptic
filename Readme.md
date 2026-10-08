@@ -2,6 +2,8 @@
 
 This is my Agentic and DevOps Project.
 
+> 📖 **Comprehensive Platform Manual**: For the complete, all-in-one platform guide covering architecture, all verification agents, complete REST API & CLI references, database schema, observability, and runbooks, see [SCEPTIC_APP_GUIDE.md](SCEPTIC_APP_GUIDE.md).
+
 ## Phase 1: Skeleton & Plumbing
 
 This phase includes the basic development skeleton and makes all core infrastructure services work together.
@@ -447,3 +449,72 @@ Phase 12 establishes the foundational timeseries telemetry layer required by fut
 - **Accessing Observability**:
   - Prometheus UI: `http://localhost:9090`
   - Grafana Dashboard: `http://localhost:3000` (Anonymous Viewer enabled)
+
+---
+
+## Phase 13: Pipeline Watchdog + Deployment Gatekeeper
+
+Phase 13 introduces dedicated post-deployment verification components ensuring runtime health and deployment integrity without automated rollback.
+
+### Components & Capabilities
+- **Pipeline Watchdog (`backend/watchdog.py`)**:
+  - Validates live `/health` status and response codes with strict timeout handling.
+  - Queries Prometheus metrics (`http_requests_total`, `http_request_duration_seconds`) to calculate error rates and p95 latency.
+  - Applies minimum-sample threshold protection (`WATCHDOG_MIN_REQUESTS`) to eliminate false alerts on sparse traffic.
+  - Accurately tracks Prometheus availability and metric absence as explicit `UNRESOLVED` states rather than false passes.
+  - Detects `DEPLOYMENT_CORRELATED_ANOMALY` when anomalies occur following release events.
+  - Persists real runtime telemetry observations to `telemetry_snapshots`.
+- **Deployment Gatekeeper (`backend/gatekeeper.py`)**:
+  - Deterministically verifies expected `commit_sha` against running commit via `/version`.
+  - Verifies application version and environment alignment.
+  - Detects image digest drift when digests are provided, safely reporting `UNRESOLVED` when digest metadata is unavailable.
+  - Verifies database deployment state consistency (`DEPLOYMENT_STATE_MISMATCH`).
+  - Idempotently records configuration deviations in `drift_events` without duplicate explosion.
+- **REST APIs**:
+  - `POST /deployments/{id}/watchdog/check`: Trigger runtime behavior verification.
+  - `POST /deployments/{id}/gatekeeper/check`: Trigger deployment integrity verification.
+  - `GET /deployments/{id}/telemetry`: Query historical telemetry snapshots.
+  - `GET /deployments/{id}/drift-events`: Query recorded drift events.
+- **CLI Commands**:
+  - `sceptic status`: Displays deployment, runtime health, error rate, p95 latency, and drift summary.
+  - `sceptic watchdog [id]`: On-demand Watchdog verification from CLI.
+  - `sceptic gatekeeper [id]`: On-demand Gatekeeper verification from CLI.
+
+---
+
+## Phase 15: Rollback Agent (Deployment Recovery Engine)
+
+Phase 15 implements the **Rollback Agent**, an autonomous recovery engine that safely, idempotently, and auditably recovers from failed deployments or critical configuration drift.
+
+### Recovery Workflow & Safety Controller
+1. **Decision Validation**:
+   - Rejects rollback if the target deployment is already marked `ROLLED_BACK`.
+   - Requires non-empty operational justification.
+2. **Previous Known-Good Discovery**:
+   - Locates predecessor deployment via explicit request, `previous_deployment_id`, or chronological search for prior healthy deployments.
+   - Strictly enforces project-level tenancy boundaries.
+3. **Mandatory Pre-Flight Safety Checks**:
+   - Target deployment validity & identity.
+   - Environment compatibility (prevents deploying staging images to production).
+   - Container image metadata and repository availability.
+   - Database schema migration safety (guards against incompatible downgrades).
+   - Concurrency lock guard (prevents race conditions with active rollbacks).
+4. **Abort Guard**:
+   - If any safety check fails, recovery halts immediately.
+   - Persists an `ABORTED` audit record to `rollback_records` without mutating the running system.
+5. **Execution & Health Verification**:
+   - Acquires the project rollback lock (`status=IN_PROGRESS`).
+   - Dispatches execution to the container recovery executor.
+   - Waits for service stabilization and verifies `/health` (HTTP 200).
+   - Verifies runtime commit SHA via `/version` against target deployment metadata.
+   - Aligns state: current deployment set to `ROLLED_BACK`, target deployment set to `ACTIVE`, active drift events marked resolved.
+   - Persists final `SUCCESS` or `FAILED` audit record with full diagnostics.
+
+### REST APIs
+- `POST /deployments/{id}/rollback`: Trigger controlled recovery operation.
+- `POST /deployments/{id}/rollback/check`: Dry-run pre-flight safety evaluation.
+- `GET /deployments/{id}/rollbacks`: List historical rollback audit records.
+
+### CLI Commands
+- `sceptic rollback [deployment_id] [--target <id>] [--reason <text>]`: Execute rollback from CLI.
+- `sceptic rollback [deployment_id] --dry-run`: Evaluate pre-flight safety checks in terminal without executing.
