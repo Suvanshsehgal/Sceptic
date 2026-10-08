@@ -77,3 +77,27 @@ export interface BackendHealth {
   database?: number;
   message?: string;
 }
+
+export interface TelemetrySnapshot {
+  id: string;
+  deployment_id: string;
+  timestamp: string;
+  health_status: string;
+  request_count?: number | null;
+  error_count?: number | null;
+  error_rate?: number | null;
+  latency_avg?: number | null;
+  latency_p95?: number | null;
+}
+
+export interface DriftEvent {
+  id: string;
+  deployment_id: string;
+  drift_type: string;
+  expected_value: string;
+  actual_value: string;
+  severity: string;
+  description: string;
+  detected_at: string;
+  resolved_at?: string | null;
+}

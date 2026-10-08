@@ -117,6 +117,33 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       )}
 
+      {/* Post-Deployment Verification Banner (Phase 13) */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span className="text-slate-400">Pipeline Watchdog:</span>
+            <span className="font-mono text-emerald-400 font-medium">Active (Health & Telemetry)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <span className="text-slate-400">Gatekeeper:</span>
+            <span className="font-mono text-cyan-400 font-medium">Active (Drift & Integrity)</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 text-slate-400 font-mono text-[11px]">
+          <a
+            href="http://localhost:3000/d/sceptic-target-observability"
+            target="_blank"
+            rel="noreferrer"
+            className="text-cyan-400 hover:text-cyan-300 underline"
+          >
+            Open Grafana Dashboard &rarr;
+          </a>
+        </div>
+      </div>
+
+
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Audits */}
