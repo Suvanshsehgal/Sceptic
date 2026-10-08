@@ -343,3 +343,80 @@ class RollbackRecordResponse(RollbackRecordBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class RollbackTriggerRequest(BaseModel):
+    reason: str = Field(..., min_length=3, description="Operational justification for rollback")
+    trigger_source: str = Field("MANUAL", max_length=100, description="Component requesting rollback (MANUAL, WATCHDOG, GATEKEEPER, etc.)")
+    target_deployment_id: Optional[UUID] = Field(None, description="Optional explicit deployment UUID to roll back to")
+    allow_unsafe_migration: bool = Field(False, description="Flag allowing rollback when migration downgrade is flagged")
+
+
+class RollbackSafetyEvaluationResponse(BaseModel):
+    deployment_id: UUID
+    target_deployment_id: Optional[UUID] = None
+    target_commit_sha: Optional[str] = None
+    target_image: Optional[str] = None
+    is_safe: bool
+    safety_checks: Dict[str, Any]
+    message: str
+
+
+class RollbackExecutionResponse(BaseModel):
+    rollback_record: RollbackRecordResponse
+    status: str
+    success: bool
+    deployment_id: UUID
+    target_deployment_id: Optional[UUID] = None
+    safety_checks: Dict[str, Any]
+    verification_details: Optional[Dict[str, Any]] = None
+    message: str
+
+
+# ==========================================
+# POST-DEPLOYMENT VERIFICATION SCHEMAS (PHASE 13)
+# ==========================================
+
+class VerificationStatus(str, Enum):
+    PASS = "PASS"
+    FAIL = "FAIL"
+    UNRESOLVED = "UNRESOLVED"
+
+
+class WatchdogFinding(BaseModel):
+    finding_type: str
+    severity: str = "HIGH"
+    expected_value: Optional[str] = None
+    actual_value: Optional[str] = None
+    description: str
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class WatchdogCheckResult(BaseModel):
+    deployment_id: UUID
+    status: VerificationStatus
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    findings: List[WatchdogFinding] = []
+    telemetry_snapshot: Optional[TelemetrySnapshotResponse] = None
+    summary: str
+
+
+class GatekeeperFinding(BaseModel):
+    finding_type: str
+    severity: str = "HIGH"
+    expected_value: Optional[str] = None
+    actual_value: Optional[str] = None
+    description: str
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class GatekeeperCheckResult(BaseModel):
+    deployment_id: UUID
+    status: VerificationStatus
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    findings: List[GatekeeperFinding] = []
+    drift_events_created: int = 0
+    summary: str
+
+

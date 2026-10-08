@@ -20,6 +20,10 @@ backend_dir = os.path.abspath(os.path.dirname(__file__))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
 worker_dir = os.path.abspath(os.path.join(backend_dir, "..", "worker"))
 if worker_dir not in sys.path:
     sys.path.insert(0, worker_dir)
@@ -38,6 +42,9 @@ from auth import (
     GOOGLE_CLIENT_ID
 )
 from feature_scoper import evaluate_feature_proposal
+from watchdog import PipelineWatchdog
+from gatekeeper import DeploymentGatekeeper
+from rollback_agent import RollbackAgent
 
 try:
     from celery_app import execute_audit_pipeline
@@ -1055,6 +1062,42 @@ async def record_telemetry_snapshot(
     return snapshot
 
 
+@app.post(
+    "/deployments/{deployment_id}/watchdog/check",
+    response_model=schemas.WatchdogCheckResult
+)
+async def check_deployment_watchdog(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Execute runtime health, latency, and error-rate verification using Pipeline Watchdog.
+    Persists real telemetry observations and returns structured findings.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    watchdog = PipelineWatchdog()
+    return await watchdog.evaluate(deployment, db)
+
+
+@app.post(
+    "/deployments/{deployment_id}/gatekeeper/check",
+    response_model=schemas.GatekeeperCheckResult
+)
+async def check_deployment_gatekeeper(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Execute deterministic deployment integrity and configuration drift verification using Gatekeeper.
+    Idempotently records detected drift events and returns structured findings.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    gatekeeper = DeploymentGatekeeper()
+    return await gatekeeper.evaluate(deployment, db)
+
+
 @app.get(
     "/deployments/{deployment_id}/drift",
     response_model=List[schemas.DriftEventResponse]
@@ -1076,6 +1119,21 @@ async def list_deployment_drift(
     )
     res = await db.execute(stmt)
     return res.scalars().all()
+
+
+@app.get(
+    "/deployments/{deployment_id}/drift-events",
+    response_model=List[schemas.DriftEventResponse]
+)
+async def list_deployment_drift_events(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List drift events recorded for an authorized deployment (canonical /drift-events endpoint).
+    """
+    return await list_deployment_drift(deployment_id, current_user, db)
 
 
 @app.post(
@@ -1177,4 +1235,59 @@ async def record_rollback(
     await db.commit()
     await db.refresh(record)
     return record
+
+
+@app.post(
+    "/deployments/{deployment_id}/rollback",
+    response_model=schemas.RollbackExecutionResponse,
+    status_code=status.HTTP_200_OK
+)
+async def execute_deployment_rollback(
+    deployment_id: UUID,
+    payload: schemas.RollbackTriggerRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Execute controlled post-deployment recovery using the Sceptic Rollback Agent.
+    Evaluates deployment validity, discovers previous known-good deployment,
+    performs mandatory safety checks, locks operation, executes recovery,
+    and validates service health & commit SHA.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    agent = RollbackAgent()
+    return await agent.evaluate_and_execute(
+        deployment=deployment,
+        reason=payload.reason,
+        trigger_source=payload.trigger_source,
+        db=db,
+        explicit_target_id=payload.target_deployment_id,
+        allow_unsafe_migration=payload.allow_unsafe_migration
+    )
+
+
+@app.post(
+    "/deployments/{deployment_id}/rollback/check",
+    response_model=schemas.RollbackSafetyEvaluationResponse,
+    status_code=status.HTTP_200_OK
+)
+async def check_deployment_rollback_safety(
+    deployment_id: UUID,
+    payload: schemas.RollbackTriggerRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Dry-run pre-flight safety evaluation for rollback without acquiring locks or executing recovery.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    agent = RollbackAgent()
+    return await agent.evaluate_safety(
+        deployment=deployment,
+        reason=payload.reason,
+        trigger_source=payload.trigger_source,
+        db=db,
+        explicit_target_id=payload.target_deployment_id,
+        allow_unsafe_migration=payload.allow_unsafe_migration
+    )
 

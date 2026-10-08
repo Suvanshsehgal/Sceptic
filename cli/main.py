@@ -626,6 +626,32 @@ def status():
             except Exception:
                 pass
 
+    # Fetch active deployment status if project is active
+    deployment_info = None
+    telemetry_info = None
+    drift_info = None
+    if token and backend_ok and active_proj:
+        with httpx.Client(timeout=3.0) as client:
+            try:
+                headers = {"Authorization": f"Bearer {token}"}
+                dep_res = client.get(f"{api_url}/projects/{active_proj['id']}/deployments", headers=headers)
+                if dep_res.status_code == 200 and dep_res.json():
+                    deployments = dep_res.json()
+                    deployment_info = deployments[0]
+                    dep_id = deployment_info["id"]
+
+                    # Fetch telemetry
+                    tel_res = client.get(f"{api_url}/deployments/{dep_id}/telemetry", headers=headers)
+                    if tel_res.status_code == 200 and tel_res.json():
+                        telemetry_info = tel_res.json()[0]
+
+                    # Fetch drift
+                    drift_res = client.get(f"{api_url}/deployments/{dep_id}/drift", headers=headers)
+                    if drift_res.status_code == 200:
+                        drift_info = drift_res.json()
+            except Exception:
+                pass
+
     table = Table(title="Sceptic CLI System Status", show_header=False, border_style="cyan")
     table.add_column("Field", style="bold cyan")
     table.add_column("Value", style="white")
@@ -634,7 +660,317 @@ def status():
     table.add_row("Authenticated As", f"{user_info['name']} ({user_info['email']})" if user_info else "[yellow]Not Logged In[/yellow]")
     table.add_row("Active Project", f"{active_proj['name']} ({active_proj['id']})" if active_proj else "[dim]None (Run 'sceptic project')[/dim]")
 
+    if deployment_info:
+        table.add_row("Deployment", f"{deployment_info['id'][:8]}... [bold]({deployment_info['status']})[/bold]")
+        table.add_row("Environment / Version", f"{deployment_info.get('environment', 'production')} / {deployment_info.get('version', 'unknown')}")
+
+        if telemetry_info:
+            h_stat = telemetry_info.get("health_status", "unknown")
+            h_color = "green" if h_stat == "healthy" else "red"
+            table.add_row("Runtime Health", f"[{h_color}]{h_stat.capitalize()}[/{h_color}]")
+
+            err_rate = telemetry_info.get("error_rate")
+            if err_rate is not None:
+                err_color = "green" if err_rate < 0.05 else "red"
+                table.add_row("Error Rate", f"[{err_color}]{err_rate:.2%}[/{err_color}]")
+
+            lat_p95 = telemetry_info.get("latency_p95")
+            if lat_p95 is not None:
+                lat_color = "green" if lat_p95 < 0.5 else "yellow"
+                table.add_row("P95 Latency", f"[{lat_color}]{lat_p95:.3f}s[/{lat_color}]")
+
+        if drift_info is not None:
+            active_drifts = [d for d in drift_info if not d.get("resolved_at")]
+            if active_drifts:
+                types = ", ".join(d.get("drift_type", "UNKNOWN") for d in active_drifts)
+                table.add_row("Drift Events", f"[red]{len(active_drifts)} active drift(s) ({types})[/red]")
+            else:
+                table.add_row("Drift Events", "[green]None (Synchronized)[/green]")
+
     console.print(table)
+
+
+@app.command(name="watchdog")
+def watchdog_cmd(
+    deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to verify"),
+):
+    """
+    Run Pipeline Watchdog runtime health, latency, and error-rate verification.
+    """
+    api_url = CLIConfig.get_api_url()
+    active_proj = CLIConfig.get_active_project()
+    token = AuthManager.get_token()
+
+    if not token:
+        console.print("[red]Error: Authentication required. Run 'sceptic login' first.[/red]")
+        raise typer.Exit(code=1)
+
+    target_dep_id = deployment_id
+    if not target_dep_id and active_proj:
+        with httpx.Client(timeout=5.0) as client:
+            try:
+                r = client.get(
+                    f"{api_url}/projects/{active_proj['id']}/deployments",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if r.status_code == 200 and r.json():
+                    target_dep_id = r.json()[0]["id"]
+            except Exception:
+                pass
+
+    if not target_dep_id:
+        console.print("[red]Error: No deployment specified and no active deployments found.[/red]")
+        raise typer.Exit(code=1)
+
+    with console.status(f"[bold cyan]Running Pipeline Watchdog check on {target_dep_id[:8]}...[/bold cyan]"):
+        with httpx.Client(timeout=15.0) as client:
+            try:
+                resp = client.post(
+                    f"{api_url}/deployments/{target_dep_id}/watchdog/check",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+            except Exception as e:
+                console.print(f"[red]Error connecting to Sceptic API: {e}[/red]")
+                raise typer.Exit(code=1)
+
+    if resp.status_code != 200:
+        console.print(f"[red]Watchdog check failed: HTTP {resp.status_code}: {resp.text}[/red]")
+        raise typer.Exit(code=1)
+
+    data = resp.json()
+    status_str = data.get("status", "UNKNOWN")
+    color = "green" if status_str == "PASS" else ("yellow" if status_str == "UNRESOLVED" else "red")
+
+    console.print(Panel(
+        f"[bold {color}]Watchdog Status: {status_str}[/bold {color}]\n"
+        f"{data.get('summary', '')}",
+        title=f"Pipeline Watchdog — {target_dep_id[:8]}",
+        border_style=color
+    ))
+
+    findings = data.get("findings", [])
+    if findings:
+        f_table = Table(title="Watchdog Findings", border_style=color)
+        f_table.add_column("Type", style="bold")
+        f_table.add_column("Severity")
+        f_table.add_column("Description")
+        for f in findings:
+            f_table.add_row(f.get("finding_type", ""), f.get("severity", ""), f.get("description", ""))
+        console.print(f_table)
+
+
+@app.command(name="gatekeeper")
+def gatekeeper_cmd(
+    deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to verify"),
+):
+    """
+    Run Deployment Gatekeeper integrity and configuration drift verification.
+    """
+    api_url = CLIConfig.get_api_url()
+    active_proj = CLIConfig.get_active_project()
+    token = AuthManager.get_token()
+
+    if not token:
+        console.print("[red]Error: Authentication required. Run 'sceptic login' first.[/red]")
+        raise typer.Exit(code=1)
+
+    target_dep_id = deployment_id
+    if not target_dep_id and active_proj:
+        with httpx.Client(timeout=5.0) as client:
+            try:
+                r = client.get(
+                    f"{api_url}/projects/{active_proj['id']}/deployments",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if r.status_code == 200 and r.json():
+                    target_dep_id = r.json()[0]["id"]
+            except Exception:
+                pass
+
+    if not target_dep_id:
+        console.print("[red]Error: No deployment specified and no active deployments found.[/red]")
+        raise typer.Exit(code=1)
+
+    with console.status(f"[bold cyan]Running Gatekeeper integrity check on {target_dep_id[:8]}...[/bold cyan]"):
+        with httpx.Client(timeout=15.0) as client:
+            try:
+                resp = client.post(
+                    f"{api_url}/deployments/{target_dep_id}/gatekeeper/check",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+            except Exception as e:
+                console.print(f"[red]Error connecting to Sceptic API: {e}[/red]")
+                raise typer.Exit(code=1)
+
+    if resp.status_code != 200:
+        console.print(f"[red]Gatekeeper check failed: HTTP {resp.status_code}: {resp.text}[/red]")
+        raise typer.Exit(code=1)
+
+    data = resp.json()
+    status_str = data.get("status", "UNKNOWN")
+    color = "green" if status_str == "PASS" else ("yellow" if status_str == "UNRESOLVED" else "red")
+
+    console.print(Panel(
+        f"[bold {color}]Gatekeeper Status: {status_str}[/bold {color}]\n"
+        f"{data.get('summary', '')}\n"
+        f"Drift events recorded: {data.get('drift_events_created', 0)}",
+        title=f"Deployment Gatekeeper — {target_dep_id[:8]}",
+        border_style=color
+    ))
+
+    findings = data.get("findings", [])
+    if findings:
+        f_table = Table(title="Gatekeeper Findings", border_style=color)
+        f_table.add_column("Type", style="bold")
+        f_table.add_column("Severity")
+        f_table.add_column("Description")
+        for f in findings:
+            f_table.add_row(f.get("finding_type", ""), f.get("severity", ""), f.get("description", ""))
+        console.print(f_table)
+
+
+@app.command(name="rollback")
+def rollback_cmd(
+    deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to roll back"),
+    target: Optional[str] = typer.Option(None, "--target", "-t", help="Specific target deployment UUID to restore"),
+    reason: Optional[str] = typer.Option(None, "--reason", "-r", help="Operational justification for rollback"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Perform pre-flight safety verification without executing rollback"),
+    allow_unsafe_migration: bool = typer.Option(False, "--allow-unsafe-migration", help="Bypass database migration downgrade guard")
+):
+    """
+    Safely recover from a failed deployment using the Sceptic Rollback Agent.
+    """
+    api_url = CLIConfig.get_api_url()
+    active_proj = CLIConfig.get_active_project()
+    token = AuthManager.get_token()
+
+    if not token:
+        console.print("[red]Error: Authentication required. Run 'sceptic login' first.[/red]")
+        raise typer.Exit(code=1)
+
+    target_dep_id = deployment_id
+    if not target_dep_id and active_proj:
+        with httpx.Client(timeout=5.0) as client:
+            try:
+                r = client.get(
+                    f"{api_url}/projects/{active_proj['id']}/deployments",
+                    headers={"Authorization": f"Bearer {token}"}
+                )
+                if r.status_code == 200 and r.json():
+                    target_dep_id = r.json()[0]["id"]
+            except Exception:
+                pass
+
+    if not target_dep_id:
+        console.print("[red]Error: No deployment specified and no active deployments found.[/red]")
+        raise typer.Exit(code=1)
+
+    rollback_reason = reason or "Manual deployment recovery triggered via Sceptic CLI"
+
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "reason": rollback_reason,
+        "trigger_source": "MANUAL",
+        "target_deployment_id": target,
+        "allow_unsafe_migration": allow_unsafe_migration
+    }
+
+    if dry_run:
+        with console.status(f"[bold cyan]Running Rollback safety evaluation on {target_dep_id[:8]}...[/bold cyan]"):
+            with httpx.Client(timeout=15.0) as client:
+                try:
+                    resp = client.post(
+                        f"{api_url}/deployments/{target_dep_id}/rollback/check",
+                        json=payload,
+                        headers=headers
+                    )
+                except Exception as e:
+                    console.print(f"[red]Error connecting to Sceptic API: {e}[/red]")
+                    raise typer.Exit(code=1)
+
+        if resp.status_code != 200:
+            console.print(f"[red]Safety evaluation failed: HTTP {resp.status_code}: {resp.text}[/red]")
+            raise typer.Exit(code=1)
+
+        data = resp.json()
+        is_safe = data.get("is_safe", False)
+        color = "green" if is_safe else "red"
+
+        console.print(Panel(
+            f"[bold {color}]Pre-Flight Safety Check: {'PASSED' if is_safe else 'FAILED'}[/bold {color}]\n"
+            f"{data.get('message', '')}\n"
+            f"Target Deployment: {data.get('target_deployment_id') or 'Auto-discovered'}\n"
+            f"Target Commit: {data.get('target_commit_sha') or 'N/A'}",
+            title=f"Rollback Safety Evaluation — {target_dep_id[:8]}",
+            border_style=color
+        ))
+
+        checks = data.get("safety_checks", {})
+        if checks:
+            s_table = Table(title="Safety Verification Checklist", border_style=color)
+            s_table.add_column("Safety Check", style="bold")
+            s_table.add_column("Status")
+            s_table.add_column("Detail")
+            for name, res in checks.items():
+                p = res.get("passed", False)
+                status_badge = "[green]PASS[/green]" if p else "[red]FAIL[/red]"
+                s_table.add_row(name, status_badge, res.get("detail", ""))
+            console.print(s_table)
+        return
+
+    # Full execution
+    with console.status(f"[bold cyan]Executing Rollback Agent on deployment {target_dep_id[:8]}...[/bold cyan]"):
+        with httpx.Client(timeout=30.0) as client:
+            try:
+                resp = client.post(
+                    f"{api_url}/deployments/{target_dep_id}/rollback",
+                    json=payload,
+                    headers=headers
+                )
+            except Exception as e:
+                console.print(f"[red]Error connecting to Sceptic API: {e}[/red]")
+                raise typer.Exit(code=1)
+
+    if resp.status_code != 200:
+        console.print(f"[red]Rollback request failed: HTTP {resp.status_code}: {resp.text}[/red]")
+        raise typer.Exit(code=1)
+
+    data = resp.json()
+    status_str = data.get("status", "UNKNOWN")
+    color = "green" if status_str == "SUCCESS" else ("yellow" if status_str == "ABORTED" else "red")
+
+    console.print(Panel(
+        f"[bold {color}]Rollback Status: {status_str}[/bold {color}]\n"
+        f"{data.get('message', '')}\n"
+        f"Recovered Deployment ID: {data.get('target_deployment_id') or 'N/A'}",
+        title=f"Rollback Agent Recovery — {target_dep_id[:8]}",
+        border_style=color
+    ))
+
+    checks = data.get("safety_checks", {})
+    if checks:
+        s_table = Table(title="Pre-Flight Safety Checklist", border_style=color)
+        s_table.add_column("Safety Check", style="bold")
+        s_table.add_column("Status")
+        s_table.add_column("Detail")
+        for name, res in checks.items():
+            p = res.get("passed", False)
+            status_badge = "[green]PASS[/green]" if p else "[red]FAIL[/red]"
+            s_table.add_row(name, status_badge, res.get("detail", ""))
+        console.print(s_table)
+
+    v_details = data.get("verification_details")
+    if v_details:
+        v_table = Table(title="Recovered Service Runtime Verification", border_style="green")
+        v_table.add_column("Property", style="bold")
+        v_table.add_column("Value")
+        for k, v in v_details.items():
+            v_table.add_row(k, str(v))
+        console.print(v_table)
+
+    if status_str != "SUCCESS":
+        raise typer.Exit(code=1)
+
 
 
 @app.command(name="doctor")
