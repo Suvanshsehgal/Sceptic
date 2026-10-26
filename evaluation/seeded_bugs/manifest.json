@@ -1,0 +1,20 @@
+{
+  "description": "Seeded bugs (kind=bug) and clean controls (kind=clean). A bug is caught when the expected agent reports a finding of MEDIUM or higher. A clean control is a false positive when any agent reports a finding of MEDIUM or higher.",
+  "cases": [
+    {"file": "bug01_hallucinated_os_path.py", "kind": "bug", "category": "hallucinated_api", "expected_agent": "Fact-Checker"},
+    {"file": "bug02_hallucinated_json.py", "kind": "bug", "category": "hallucinated_api", "expected_agent": "Fact-Checker"},
+    {"file": "bug03_hallucinated_math.py", "kind": "bug", "category": "hallucinated_api", "expected_agent": "Fact-Checker"},
+    {"file": "bug04_hallucinated_re.py", "kind": "bug", "category": "hallucinated_api", "expected_agent": "Fact-Checker"},
+    {"file": "bug05_spec_add_returns_product.py", "kind": "bug", "category": "spec_mismatch", "expected_agent": "Blind-Tester"},
+    {"file": "bug06_spec_larger_returns_smaller.py", "kind": "bug", "category": "spec_mismatch", "expected_agent": "Blind-Tester"},
+    {"file": "bug07_spec_ratio_floor_division.py", "kind": "bug", "category": "spec_mismatch", "expected_agent": "Blind-Tester"},
+    {"file": "bug08_command_injection_os_system.py", "kind": "bug", "category": "security", "expected_agent": "Security-Guard"},
+    {"file": "bug09_subprocess_shell_true.py", "kind": "bug", "category": "security", "expected_agent": "Security-Guard"},
+    {"file": "bug10_eval_user_input.py", "kind": "bug", "category": "security", "expected_agent": "Security-Guard"},
+    {"file": "bug11_pickle_untrusted.py", "kind": "bug", "category": "security", "expected_agent": "Security-Guard"},
+    {"file": "bug12_hardcoded_password.py", "kind": "bug", "category": "security", "expected_agent": "Security-Guard"},
+    {"file": "clean01_path_join.py", "kind": "clean", "category": "control", "expected_agent": null},
+    {"file": "clean02_json_parse.py", "kind": "clean", "category": "control", "expected_agent": null},
+    {"file": "clean03_hypotenuse.py", "kind": "clean", "category": "control", "expected_agent": null}
+  ]
+}
