@@ -1,0 +1,14 @@
+{
+  "name": "sceptic-js-tools",
+  "private": true,
+  "description": "Pinned JavaScript/TypeScript tools used by the sandbox (Jest) and the verifier (tsc).",
+  "dependencies": {
+    "typescript": "5.6.3"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "ts-jest": "29.2.5",
+    "@types/jest": "29.5.14",
+    "@types/node": "20.17.6"
+  }
+}
