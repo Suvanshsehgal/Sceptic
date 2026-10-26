@@ -8,6 +8,7 @@ import { AuditDetailView } from './components/AuditDetailView';
 import { FeaturesPage } from './components/FeaturesPage';
 import { FindingsPage } from './components/FindingsPage';
 import { DocsCenter } from './components/DocsCenter';
+import { DeploymentsPage } from './components/DeploymentsPage';
 import { AuthProvider } from './context/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -21,7 +22,7 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'projects' | 'audits' | 'features' | 'findings' | 'docs'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'projects' | 'audits' | 'features' | 'findings' | 'deployments' | 'docs'>('dashboard');
   const [selectedAuditId, setSelectedAuditId] = useState<number | string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -47,33 +48,38 @@ function AppContent() {
     switch (currentTab) {
       case 'dashboard':
         return {
-          title: 'Verification Dashboard',
-          subtitle: 'Real-time overview of code verification metrics and trust scores',
+          title: 'Overview',
+          subtitle: 'Recent verification runs and where they stand',
         };
       case 'projects':
         return {
-          title: 'Project Repositories',
-          subtitle: 'Managed projects synchronized between Web and Sceptic CLI',
+          title: 'Projects',
+          subtitle: 'Repositories shared between the dashboard and the CLI',
         };
       case 'audits':
         return {
-          title: 'Audit Runs Repository',
-          subtitle: 'Detailed history of pull request and CLI code audits',
+          title: 'Audits',
+          subtitle: 'Pull request and CLI verification runs',
         };
       case 'features':
         return {
-          title: 'Feature Architecture Scoping',
-          subtitle: 'Feasibility, complexity, and risk analysis for proposed features',
+          title: 'Feature analysis',
+          subtitle: 'Feasibility, complexity, and risk for proposed changes',
         };
       case 'findings':
         return {
-          title: 'All Verification Findings',
-          subtitle: 'Aggregated security flaws, spec violations, and hallucinated APIs',
+          title: 'Findings',
+          subtitle: 'Security issues, spec violations, and unknown APIs across audits',
+        };
+      case 'deployments':
+        return {
+          title: 'Deployments',
+          subtitle: 'Live health, drift, and rollbacks',
         };
       case 'docs':
         return {
-          title: 'Documentation Center',
-          subtitle: 'Architecture guide, CLI installation, and verification specifications',
+          title: 'Documentation',
+          subtitle: 'Architecture, CLI setup, and verification rules',
         };
       default:
         return { title: 'Sceptic', subtitle: '' };
@@ -83,7 +89,13 @@ function AppContent() {
   const headerInfo = getHeaderInfo();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased">
+    <div className="flex min-h-screen flex-col bg-canvas text-ink antialiased">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-60 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-accent-ink"
+      >
+        Skip to main content
+      </a>
       {/* Navigation Sidebar */}
       <Sidebar
         currentTab={currentTab}
@@ -93,14 +105,14 @@ function AppContent() {
       />
 
       {/* Main Content Area */}
-      <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
+      <div className="flex min-h-screen flex-1 flex-col lg:pl-64">
         <Header
           onOpenMobile={() => setMobileMenuOpen(true)}
           title={headerInfo.title}
           subtitle={headerInfo.subtitle}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 focus:outline-none sm:px-6 lg:px-8 lg:py-8">
           {currentTab === 'dashboard' && (
             <DashboardOverview
               onSelectAudit={handleSelectAudit}
@@ -128,6 +140,8 @@ function AppContent() {
           {currentTab === 'findings' && (
             <FindingsPage onSelectAudit={handleSelectAudit as any} />
           )}
+
+          {currentTab === 'deployments' && <DeploymentsPage />}
 
           {currentTab === 'docs' && <DocsCenter />}
         </main>
