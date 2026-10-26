@@ -13,6 +13,10 @@ on:
         description: "Application version semver"
         required: true
         default: "1.0.0"
+      gate_override_reason:
+        description: "Only for an approved override of a BLOCK or REQUEST_CHANGES gate. Min 10 characters. Logged with the approver."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -103,9 +107,38 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install Deployment Orchestrator Dependencies
+      - name: Install Deployment Orchestrator and Verification Dependencies
         run: |
+          pip install -r worker/requirements.txt
+          pip install -e .
           pip install httpx pydantic pytest
+
+      - name: Build Blind-Tester Sandbox Image
+        run: docker build -t sceptic-sandbox:latest -f worker/sandbox/Dockerfile worker
+
+      # -------------------------------------------------------------
+      # 2b. Verification Gate: audit the service being deployed
+      # -------------------------------------------------------------
+      - name: Install gitleaks (checksum verified)
+        run: |
+          VERSION=8.30.1
+          curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o checksums.txt "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_checksums.txt"
+          grep "gitleaks_${VERSION}_linux_x64.tar.gz" checksums.txt | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Audit Target Service (Trust Gate Input)
+        id: audit
+        run: |
+          set +e
+          python -m cli.main audit target_service --json > audit-report.json
+          echo "Audit exit code: $?"
+          set -e
+          RECOMMENDATION=$(python -c "import json; r=json.load(open('audit-report.json')).get('recommendation','BLOCK'); print(r if r in ('APPROVE','REQUEST_CHANGES','BLOCK') else 'BLOCK')")
+          echo "recommendation=$RECOMMENDATION" >> "$GITHUB_OUTPUT"
+          echo "Trust gate recommendation: $RECOMMENDATION"
 
       - name: Launch Containerized Services
         env:
@@ -121,9 +154,14 @@ jobs:
       # 3. Post-Deployment Health, Version & Commit Verification
       # -------------------------------------------------------------
       - name: Verify Deployment Health and Commit Identity
+        env:
+          SCEPTIC_PROJECT_ID: ${{ secrets.SCEPTIC_PROJECT_ID }}
+          SCEPTIC_API_TOKEN: ${{ secrets.SCEPTIC_API_TOKEN }}
+          GATE_OVERRIDE_REASON: ${{ inputs.gate_override_reason }}
         run: |
           python scripts/deploy.py \
-            --project-id "00000000-0000-0000-0000-000000000001" \
+            --project-id "$SCEPTIC_PROJECT_ID" \
+            --api-token "$SCEPTIC_API_TOKEN" \
             --commit-sha "${{ github.sha }}" \
             --image-name "${{ steps.image-names.outputs.target_image }}" \
             --image-tag "${{ github.sha }}" \
@@ -131,6 +169,9 @@ jobs:
             --version "${{ env.APPLICATION_VERSION }}" \
             --target-url "http://localhost:8080" \
             --backend-url "http://localhost:8000" \
+            --trust-recommendation "${{ steps.audit.outputs.recommendation }}" \
+            --override-reason "$GATE_OVERRIDE_REASON" \
+            --override-by "${{ github.actor }}" \
             --timeout 45.0
 
       - name: Teardown Services on Completion

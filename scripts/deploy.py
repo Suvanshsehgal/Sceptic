@@ -22,6 +22,8 @@ import httpx
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("sceptic.deployer")
 
+MIN_OVERRIDE_REASON_LENGTH = 10
+
 
 def evaluate_trust_gate(recommendation: Optional[str]) -> Tuple[bool, str]:
     """
@@ -31,7 +33,8 @@ def evaluate_trust_gate(recommendation: Optional[str]) -> Tuple[bool, str]:
     - BLOCK: deployment prevented
     """
     if not recommendation:
-        return True, "No trust recommendation provided; proceeding without gate restriction."
+        # Fail closed: a deployment with no verification verdict is not verified.
+        return False, "Deployment halted: no trust recommendation was provided, so the code is unverified."
 
     rec = recommendation.strip().upper()
     if rec == "APPROVE":
@@ -121,17 +124,48 @@ def run_deployment_pipeline(
     api_token: Optional[str] = None,
     trust_recommendation: Optional[str] = None,
     timeout_seconds: float = 30.0,
-    client: Optional[httpx.Client] = None
+    client: Optional[httpx.Client] = None,
+    override_reason: Optional[str] = None,
+    override_by: Optional[str] = None,
 ) -> Tuple[int, Dict[str, Any]]:
     """
     Full deployment orchestration executor.
     Returns (exit_code, result_dict).
+
+    Gate override: a BLOCK or REQUEST_CHANGES verdict can be overridden only with a named approver
+    (override_by) and a reason of at least MIN_OVERRIDE_REASON_LENGTH characters. The override is logged
+    and returned in the result, so the deployment record shows who approved it.
     """
     backend_url = backend_url.rstrip("/")
     headers = {"Authorization": f"Bearer {api_token}"} if api_token else {}
 
     # Step 1: Trust Score Deployment Gate
     gate_ok, gate_msg = evaluate_trust_gate(trust_recommendation)
+    override_record = None
+    if not gate_ok:
+        reason = (override_reason or "").strip()
+        approver = (override_by or "").strip()
+        if reason:
+            if len(reason) < MIN_OVERRIDE_REASON_LENGTH or not approver:
+                logger.error(
+                    f"[GATE DENIED] {gate_msg} Override rejected: an approver and a reason of at least "
+                    f"{MIN_OVERRIDE_REASON_LENGTH} characters are required."
+                )
+                return 1, {
+                    "status": "BLOCKED",
+                    "reason": f"{gate_msg} Override rejected: approver and reason are required.",
+                    "commit_sha": commit_sha
+                }
+            override_record = {
+                "approved_by": approver,
+                "reason": reason,
+                "trust_recommendation": trust_recommendation,
+            }
+            logger.warning(
+                f"[GATE OVERRIDE] {gate_msg} Overridden by {approver}: {reason}"
+            )
+            gate_ok = True
+            gate_msg = f"Gate overridden by {approver}."
     if not gate_ok:
         logger.error(f"[GATE DENIED] {gate_msg}")
         return 1, {
@@ -199,7 +233,8 @@ def run_deployment_pipeline(
         "commit_sha": commit_sha,
         "image": f"{image_name}:{image_tag}",
         "reason": reason,
-        "metadata": v_data
+        "metadata": v_data,
+        "gate_override": override_record,
     }
 
 
@@ -216,6 +251,8 @@ def main():
     parser.add_argument("--api-token", default=None, help="JWT bearer token for authenticated requests")
     parser.add_argument("--trust-recommendation", default=None, choices=["APPROVE", "REQUEST_CHANGES", "BLOCK"], help="Synthesizer recommendation")
     parser.add_argument("--timeout", type=float, default=30.0, help="Readiness check timeout in seconds")
+    parser.add_argument("--override-reason", default=None, help="Justification for overriding a BLOCK or REQUEST_CHANGES gate (min 10 characters)")
+    parser.add_argument("--override-by", default=None, help="Name of the person approving the gate override")
 
     args = parser.parse_args()
 
@@ -232,7 +269,9 @@ def main():
         backend_url=args.backend_url,
         api_token=args.api_token,
         trust_recommendation=args.trust_recommendation,
-        timeout_seconds=args.timeout
+        timeout_seconds=args.timeout,
+        override_reason=args.override_reason,
+        override_by=args.override_by,
     )
 
     print(f"Deployment Result: {result}")

@@ -1,0 +1,4 @@
+# Changes to CI/CD workflows and to the rules that govern them need review from the repository owner.
+# Replace @Suvanshsehgal with the GitHub user or team that should approve these changes.
+/.github/workflows/ @Suvanshsehgal
+/.github/CODEOWNERS @Suvanshsehgal
