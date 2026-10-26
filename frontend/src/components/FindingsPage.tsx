@@ -1,220 +1,230 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2, ChevronDown, ChevronRight, ExternalLink, ShieldAlert } from 'lucide-react';
 import { fetchAudits } from '../api';
-import { AuditRun, AgentFinding } from '../types';
-import { 
-  AlertTriangle, 
-  Search, 
-  Filter, 
-  ShieldAlert, 
-  FileCode2, 
-  ExternalLink,
-  ChevronDown,
-  ChevronRight,
-  CheckCircle2
-} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { AgentFinding, AuditRun } from '../types';
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorBanner,
+  Field,
+  PageHeader,
+  SeverityBadge,
+  Skeleton,
+  fieldClass,
+} from './ui';
 
 interface FindingsPageProps {
   onSelectAudit: (auditId: string | number) => void;
 }
 
-export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => {
-  const [severityFilter, setSeverityFilter] = useState<string>('ALL');
-  const [agentFilter, setAgentFilter] = useState<string>('ALL');
-  const [search, setSearch] = useState<string>('');
-  const [expandedFindings, setExpandedFindings] = useState<Record<string, boolean>>({});
+interface FindingWithParent extends AgentFinding {
+  audit_id: string | number;
+  repo_name: string;
+}
 
+const SEVERITIES = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+const AGENTS = ['Fact-Checker', 'Blind-Tester', 'Security-Guard', 'Leak-Hunter', 'Purana-Saman', 'Jhooti-Docstring'];
+
+export const FindingsPage: React.FC<FindingsPageProps> = ({ onSelectAudit }) => {
+  const [severityFilter, setSeverityFilter] = useState('ALL');
+  const [agentFilter, setAgentFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const { token } = useAuth();
   const { data: audits, isLoading, error } = useQuery<AuditRun[]>({
     queryKey: ['audits'],
     queryFn: () => fetchAudits(0, 100),
+    enabled: !!token,
   });
 
-  const toggleExpand = (id: string | number) => {
-    setExpandedFindings((prev) => ({
-      ...prev,
-      [String(id)]: !prev[String(id)],
-    }));
-  };
-
-  // Flatten findings across audits while retaining parent audit metadata
-  interface FindingWithParent extends AgentFinding {
-    audit_id: string | number;
-    repo_name?: string;
-  }
-
-  const allFindings: FindingWithParent[] = (audits || []).flatMap((audit) =>
-    (audit.findings || []).map((f) => ({
-      ...f,
-      audit_id: audit.id,
-      repo_name: audit.pull_request?.repository || audit.pull_request?.repository_full_name || 'Project Audit',
-    }))
+  const allFindings: FindingWithParent[] = useMemo(
+    () =>
+      (audits || []).flatMap((audit) =>
+        (audit.findings || []).map((f) => ({
+          ...f,
+          audit_id: audit.id,
+          repo_name: audit.pull_request?.repository || 'Project audit',
+        }))
+      ),
+    [audits]
   );
 
-  const filtered = allFindings.filter((f) => {
-    const matchesSev = severityFilter === 'ALL' || f.severity?.toUpperCase() === severityFilter;
-    const matchesAgent = agentFilter === 'ALL' || f.agent_name?.toLowerCase().includes(agentFilter.toLowerCase());
-    const matchesSearch =
-      search === '' ||
-      f.title?.toLowerCase().includes(search.toLowerCase()) ||
-      f.description?.toLowerCase().includes(search.toLowerCase()) ||
-      f.file_path?.toLowerCase().includes(search.toLowerCase()) ||
-      f.audit_id.toString().includes(search);
+  const agentOptions = useMemo(
+    () => Array.from(new Set([...AGENTS, ...allFindings.map((f) => f.agent_name)])).filter(Boolean),
+    [allFindings]
+  );
 
-    return matchesSev && matchesAgent && matchesSearch;
-  });
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return allFindings
+      .filter((f) => severityFilter === 'ALL' || (f.severity || '').toUpperCase() === severityFilter)
+      .filter((f) => agentFilter === 'ALL' || f.agent_name === agentFilter)
+      .filter(
+        (f) =>
+          !query ||
+          f.title?.toLowerCase().includes(query) ||
+          f.description?.toLowerCase().includes(query) ||
+          f.file_path?.toLowerCase().includes(query) ||
+          String(f.audit_id).includes(query)
+      );
+  }, [allFindings, severityFilter, agentFilter, search]);
+
+  const counts = useMemo(() => {
+    const total: Record<string, number> = {};
+    allFindings.forEach((f) => {
+      const key = (f.severity || 'INFO').toUpperCase();
+      total[key] = (total[key] || 0) + 1;
+    });
+    return total;
+  }, [allFindings]);
+
+  if (!token) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="Findings" description="Issues reported across all audits, with severity and location." />
+        <Card>
+          <EmptyState
+            icon={<ShieldAlert className="h-9 w-9" />}
+            title="Sign in to see findings"
+            description="Findings come from your audits. Sign in from the sidebar to load them."
+          />
+        </Card>
+      </div>
+    );
+  }
+
+  const toggle = (id: string | number) =>
+    setExpanded((prev) => ({ ...prev, [String(id)]: !prev[String(id)] }));
 
   return (
     <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by title, description, file, audit #..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500/50"
-          />
-        </div>
+      <PageHeader
+        title="Findings"
+        description="Every issue reported across all audits, with its severity, the agent that found it, and where it is."
+      />
 
-        <div className="flex items-center gap-3">
-          {/* Severity Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs">
-            <ShieldAlert className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
-              className="bg-transparent text-slate-300 focus:outline-none"
+      {/* Severity summary doubles as a filter */}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by severity">
+        {SEVERITIES.map((sev) => {
+          const count = sev === 'ALL' ? allFindings.length : counts[sev] || 0;
+          const active = severityFilter === sev;
+          return (
+            <button
+              key={sev}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setSeverityFilter(sev)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                active ? 'border-accent/40 bg-accent/10 text-accent' : 'border-line bg-surface text-ink-muted hover:text-ink'
+              }`}
             >
-              <option value="ALL">All Severities</option>
-              <option value="CRITICAL">Critical</option>
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
-              <option value="INFO">Info</option>
-            </select>
-          </div>
-
-          {/* Agent Dropdown */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs">
-            <Filter className="h-3.5 w-3.5 text-slate-400" />
-            <select
-              value={agentFilter}
-              onChange={(e) => setAgentFilter(e.target.value)}
-              className="bg-transparent text-slate-300 focus:outline-none"
-            >
-              <option value="ALL">All Agents</option>
-              {Array.from(new Set(['Fact-Checker', 'Blind-Tester', 'Security-Guard', ...allFindings.map((f) => f.agent_name)])).filter(Boolean).map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+              {sev === 'ALL' ? 'All' : sev.charAt(0) + sev.slice(1).toLowerCase()}
+              <span className="ml-2 font-mono text-ink-subtle">{count}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main List */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+        <Field label="Search" htmlFor="finding-search">
+          <input
+            id="finding-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Title, description, file, or audit ID"
+            className={fieldClass}
+          />
+        </Field>
+        <Field label="Agent" htmlFor="finding-agent">
+          <select id="finding-agent" value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className={fieldClass}>
+            <option value="ALL">All agents</option>
+            {agentOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
       {isLoading ? (
-        <div className="p-12 text-center text-slate-400 text-xs animate-pulse">
-          Loading findings repository...
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-14" />)}
         </div>
       ) : error ? (
-        <div className="p-8 text-center text-red-400 text-xs">
-          Failed to load findings: {(error as Error).message}
-        </div>
+        <ErrorBanner title="Could not load findings" message={(error as Error).message} />
       ) : filtered.length === 0 ? (
-        <div className="p-16 text-center rounded-xl bg-slate-900 border border-slate-800">
-          <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto mb-3" />
-          <h3 className="text-sm font-semibold text-slate-200">No Findings Match Your Filters</h3>
-          <p className="text-xs text-slate-400 mt-1">
-            No issues found under the selected severity and agent criteria.
-          </p>
-        </div>
+        <EmptyState
+          icon={allFindings.length === 0 ? <CheckCircle2 className="h-10 w-10 text-success" /> : <ShieldAlert className="h-10 w-10" />}
+          title={allFindings.length === 0 ? 'No findings recorded' : 'No findings match these filters'}
+          description={allFindings.length === 0 ? 'Audits that report no issues show up here as clean runs.' : 'Clear the filters to see everything.'}
+        />
       ) : (
-        <div className="space-y-3">
-          {filtered.map((finding) => {
-            const isExpanded = !!expandedFindings[finding.id];
-            const sev = (finding.severity || 'INFO').toUpperCase();
-
-            return (
-              <div
-                key={finding.id}
-                className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden text-xs"
-              >
-                <div
-                  onClick={() => toggleExpand(finding.id)}
-                  className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-800/40 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <button className="text-slate-400 hover:text-white">
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </button>
-
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
-                      sev === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                      sev === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                      sev === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                      sev === 'LOW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                      'bg-slate-800 text-slate-300'
-                    }`}>
-                      {sev}
-                    </span>
-
-                    <div>
-                      <span className="font-semibold text-slate-200 block sm:inline mr-2">
-                        {finding.title}
-                      </span>
-                      <span className="text-slate-400 font-mono text-[11px]">
-                        [{finding.agent_name}]
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-slate-400 font-mono text-[11px] hidden md:block">
-                      {finding.file_path ? `${finding.file_path}:${finding.line_number || '-'}` : 'Project Scope'}
-                    </div>
-
+        <Card padded={false}>
+          <p className="border-b border-line px-5 py-3 text-xs text-ink-muted" aria-live="polite">
+            Showing {filtered.length} of {allFindings.length} findings
+          </p>
+          <ul className="divide-y divide-line">
+            {filtered.map((finding) => {
+              const isOpen = !!expanded[finding.id];
+              const location = finding.file_path ? `${finding.file_path}${finding.line_number ? `:${finding.line_number}` : ''}` : 'Project scope';
+              return (
+                <li key={finding.id}>
+                  <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectAudit(finding.audit_id);
-                      }}
-                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 font-sans text-xs transition-colors flex items-center gap-1"
+                      type="button"
+                      onClick={() => toggle(finding.id)}
+                      aria-expanded={isOpen}
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left"
                     >
-                      <span>Audit #{String(finding.audit_id).substring(0, 8)}</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="px-5 pb-5 pt-1 border-t border-slate-800/60 bg-slate-950/40 space-y-3">
-                    <div>
-                      <span className="font-semibold text-slate-400 uppercase text-[10px] block mb-1">
-                        Description
+                      <span className="mt-0.5 text-ink-subtle" aria-hidden>
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </span>
-                      <p className="text-slate-300 leading-relaxed font-sans">{finding.description}</p>
-                    </div>
-
-                    {finding.evidence && (
-                      <div>
-                        <span className="font-semibold text-slate-400 uppercase text-[10px] block mb-1">
-                          Evidence & Trace
+                      <span className="min-w-0 space-y-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <SeverityBadge severity={finding.severity} />
+                          <span className="text-sm font-medium text-ink">{finding.title}</span>
                         </span>
-                        <pre className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-emerald-400/90 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
-                          {typeof finding.evidence === 'object'
-                            ? JSON.stringify(finding.evidence, null, 2)
-                            : String(finding.evidence)}
-                        </pre>
-                      </div>
-                    )}
+                        <span className="block font-mono text-xs text-ink-subtle">
+                          {finding.agent_name} · {location}
+                        </span>
+                      </span>
+                    </button>
+                    <Button variant="ghost" size="sm" onClick={() => onSelectAudit(finding.audit_id)} className="self-start sm:self-center">
+                      Audit {String(finding.audit_id).slice(0, 8)}
+                      <ExternalLink className="h-3 w-3" aria-hidden />
+                    </Button>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  {isOpen && (
+                    <div className="space-y-4 border-t border-line bg-canvas/40 px-5 pb-5 pt-4 pl-12">
+                      <div>
+                        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Description</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-ink-muted">{finding.description || 'No description provided.'}</p>
+                      </div>
+                      {finding.recommendation && (
+                        <div>
+                          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Recommendation</h3>
+                          <p className="mt-1 text-sm leading-relaxed text-ink-muted">{finding.recommendation}</p>
+                        </div>
+                      )}
+                      {finding.evidence && (
+                        <div>
+                          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Evidence</h3>
+                          <pre className="mt-1 max-h-72 overflow-auto rounded-lg border border-line bg-surface p-3 font-mono text-[11px] leading-relaxed text-accent/90">
+                            {typeof finding.evidence === 'object' ? JSON.stringify(finding.evidence, null, 2) : String(finding.evidence)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
     </div>
   );
