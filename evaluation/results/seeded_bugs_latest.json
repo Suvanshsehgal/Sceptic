@@ -1,0 +1,771 @@
+{
+  "run_at_utc": "2026-10-25T11:04:11.306790+00:00",
+  "sandbox_mode": "docker",
+  "groq_enabled": true,
+  "summary": {
+    "seeded_bugs": 12,
+    "caught": 9,
+    "catch_rate": 0.75,
+    "clean_controls": 3,
+    "false_positives": 1,
+    "false_positive_rate": 0.333,
+    "by_category": {
+      "hallucinated_api": {
+        "seeded": 4,
+        "caught": 4,
+        "catch_rate": 1.0
+      },
+      "spec_mismatch": {
+        "seeded": 3,
+        "caught": 1,
+        "catch_rate": 0.333
+      },
+      "security": {
+        "seeded": 5,
+        "caught": 4,
+        "catch_rate": 0.8
+      }
+    }
+  },
+  "results": [
+    {
+      "file": "bug01_hallucinated_os_path.py",
+      "kind": "bug",
+      "category": "hallucinated_api",
+      "expected_agent": "Fact-Checker",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 0,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Fact-Checker",
+          "severity": "HIGH",
+          "title": "Non-existent API"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in join_paths"
+        }
+      ],
+      "evidence": {
+        "title": "Non-existent API",
+        "severity": "HIGH",
+        "detail": "{'language': 'python', 'called_api': 'os.path.joinn', 'resolved_path': 'os.path.joinn', 'verification': 'Module or attribute missing from environment'}"
+      }
+    },
+    {
+      "file": "bug02_hallucinated_json.py",
+      "kind": "bug",
+      "category": "hallucinated_api",
+      "expected_agent": "Fact-Checker",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 0,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Fact-Checker",
+          "severity": "HIGH",
+          "title": "Non-existent API"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in parse_config"
+        }
+      ],
+      "evidence": {
+        "title": "Non-existent API",
+        "severity": "HIGH",
+        "detail": "{'language': 'python', 'called_api': 'json.loadz', 'resolved_path': 'json.loadz', 'verification': 'Module or attribute missing from environment'}"
+      }
+    },
+    {
+      "file": "bug03_hallucinated_math.py",
+      "kind": "bug",
+      "category": "hallucinated_api",
+      "expected_agent": "Fact-Checker",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 0,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Fact-Checker",
+          "severity": "HIGH",
+          "title": "Non-existent API"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in root"
+        }
+      ],
+      "evidence": {
+        "title": "Non-existent API",
+        "severity": "HIGH",
+        "detail": "{'language': 'python', 'called_api': 'math.sqroot', 'resolved_path': 'math.sqroot', 'verification': 'Module or attribute missing from environment'}"
+      }
+    },
+    {
+      "file": "bug04_hallucinated_re.py",
+      "kind": "bug",
+      "category": "hallucinated_api",
+      "expected_agent": "Fact-Checker",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 0,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Fact-Checker",
+          "severity": "HIGH",
+          "title": "Non-existent API"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in find_all_digits"
+        }
+      ],
+      "evidence": {
+        "title": "Non-existent API",
+        "severity": "HIGH",
+        "detail": "{'language': 'python', 'called_api': 're.matchall', 'resolved_path': 're.matchall', 'verification': 'Module or attribute missing from environment'}"
+      }
+    },
+    {
+      "file": "bug05_spec_add_returns_product.py",
+      "kind": "bug",
+      "category": "spec_mismatch",
+      "expected_agent": "Blind-Tester",
+      "caught": false,
+      "false_positive": false,
+      "trust_score": 0,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in add"
+        }
+      ],
+      "evidence": null
+    },
+    {
+      "file": "bug06_spec_larger_returns_smaller.py",
+      "kind": "bug",
+      "category": "spec_mismatch",
+      "expected_agent": "Blind-Tester",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 20,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in larger"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in larger"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in larger"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in larger"
+        }
+      ],
+      "evidence": {
+        "title": "Specification Violation in larger",
+        "severity": "HIGH",
+        "detail": "test_generated.py::test_larger_ints FAILED                               [ 14%] [errors: AssertionError]"
+      }
+    },
+    {
+      "file": "bug07_spec_ratio_floor_division.py",
+      "kind": "bug",
+      "category": "spec_mismatch",
+      "expected_agent": "Blind-Tester",
+      "caught": false,
+      "false_positive": false,
+      "trust_score": 60,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in ratio"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in ratio"
+        }
+      ],
+      "evidence": null
+    },
+    {
+      "file": "bug08_command_injection_os_system.py",
+      "kind": "bug",
+      "category": "security",
+      "expected_agent": "Security-Guard",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 40,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in remove_upload"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in remove_upload"
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "HIGH",
+          "title": "[BANDIT] B605 (start_process_with_a_shell): Starting a process with a shell, possible injection detected, security issue."
+        }
+      ],
+      "evidence": {
+        "title": "[BANDIT] B605 (start_process_with_a_shell): Starting a process with a shell, possible injection detected, security issue.",
+        "severity": "HIGH",
+        "detail": "Line 6: 5     \"\"\"Deletes an uploaded file at the given path.\"\"\"\n6     os.system(\"rm -f \" + path)"
+      }
+    },
+    {
+      "file": "bug09_subprocess_shell_true.py",
+      "kind": "bug",
+      "category": "security",
+      "expected_agent": "Security-Guard",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 57,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in run_tool"
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "HIGH",
+          "title": "[BANDIT] B602 (subprocess_popen_with_shell_equals_true): subprocess call with shell=True identified, security issue."
+        }
+      ],
+      "evidence": {
+        "title": "[BANDIT] B602 (subprocess_popen_with_shell_equals_true): subprocess call with shell=True identified, security issue.",
+        "severity": "HIGH",
+        "detail": "Line 6: 5     \"\"\"Runs a helper command and returns its exit code.\"\"\"\n6     return subprocess.run(cmd, shell=True).returncode"
+      }
+    },
+    {
+      "file": "bug10_eval_user_input.py",
+      "kind": "bug",
+      "category": "security",
+      "expected_agent": "Security-Guard",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 50,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in calculate"
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "MEDIUM",
+          "title": "[BANDIT] B307 (blacklist): Use of possibly insecure function - consider using safer ast.literal_eval."
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "HIGH",
+          "title": "[SEMGREP] python-dangerous-eval: Detected use of dynamic code evaluation (eval or exec)."
+        }
+      ],
+      "evidence": {
+        "title": "[BANDIT] B307 (blacklist): Use of possibly insecure function - consider using safer ast.literal_eval.",
+        "severity": "MEDIUM",
+        "detail": "Line 3: 2     \"\"\"Evaluates a simple arithmetic expression supplied by the user.\"\"\"\n3     return eval(expression)"
+      }
+    },
+    {
+      "file": "bug11_pickle_untrusted.py",
+      "kind": "bug",
+      "category": "security",
+      "expected_agent": "Security-Guard",
+      "caught": true,
+      "false_positive": false,
+      "trust_score": 47,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in load_session"
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "MEDIUM",
+          "title": "[BANDIT] B301 (blacklist): Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue."
+        },
+        {
+          "agent": "Security-Guard",
+          "severity": "HIGH",
+          "title": "[SEMGREP] python-insecure-deserialization: Insecure deserialization using pickle or unsafe YAML loader."
+        }
+      ],
+      "evidence": {
+        "title": "[BANDIT] B301 (blacklist): Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue.",
+        "severity": "MEDIUM",
+        "detail": "Line 6: 5     \"\"\"Restores a session object from a stored blob.\"\"\"\n6     return pickle.loads(blob)"
+      }
+    },
+    {
+      "file": "bug12_hardcoded_password.py",
+      "kind": "bug",
+      "category": "security",
+      "expected_agent": "Security-Guard",
+      "caught": false,
+      "false_positive": false,
+      "trust_score": 37,
+      "recommendation": "BLOCK",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in connect_info"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in connect_info"
+        },
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in connect_info"
+        }
+      ],
+      "evidence": null
+    },
+    {
+      "file": "clean01_path_join.py",
+      "kind": "clean",
+      "category": "control",
+      "expected_agent": null,
+      "caught": false,
+      "false_positive": false,
+      "trust_score": 100,
+      "recommendation": "APPROVE",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [],
+      "evidence": null
+    },
+    {
+      "file": "clean02_json_parse.py",
+      "kind": "clean",
+      "category": "control",
+      "expected_agent": null,
+      "caught": false,
+      "false_positive": false,
+      "trust_score": 100,
+      "recommendation": "APPROVE",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [],
+      "evidence": null
+    },
+    {
+      "file": "clean03_hypotenuse.py",
+      "kind": "clean",
+      "category": "control",
+      "expected_agent": null,
+      "caught": false,
+      "false_positive": true,
+      "trust_score": 75,
+      "recommendation": "REQUEST_CHANGES",
+      "agent_statuses": {
+        "Fact-Checker": "OK",
+        "Blind-Tester": "OK",
+        "Security-Guard": "OK",
+        "Synthesizer": "OK"
+      },
+      "reported_findings": [
+        {
+          "agent": "Blind-Tester",
+          "severity": "HIGH",
+          "title": "Specification Violation in hypotenuse"
+        }
+      ],
+      "evidence": null
+    }
+  ]
+}
