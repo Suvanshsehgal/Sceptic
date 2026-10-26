@@ -13,3 +13,10 @@ scrape_configs:
     scrape_timeout: 4s
     static_configs:
       - targets: ["target-service:8080"]
+
+  - job_name: "demo-site"
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    static_configs:
+      - targets: ["demo-site:8090"]

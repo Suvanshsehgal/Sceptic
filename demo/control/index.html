@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sceptic Demo Control</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0c0d0f; color: #e8e9ec; }
+    main { max-width: 880px; margin: 0 auto; padding: 32px 16px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    p.sub { color: #9aa0aa; margin: 0 0 24px; font-size: 14px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .card { background: #131417; border: 1px solid #24272d; border-radius: 12px; padding: 18px; }
+    .card h2 { font-size: 14px; margin: 0 0 12px; color: #c9ccd2; text-transform: uppercase; letter-spacing: .05em; }
+    .row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-top: 1px solid #1f2227; }
+    .row:first-of-type { border-top: 0; }
+    .pill { font-family: ui-monospace, Consolas, monospace; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #1a1c20; }
+    .ok { color: #6fd39a; } .bad { color: #ef7a7a; } .warn { color: #e8c170; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    button { font: inherit; font-size: 13px; color: #e8e9ec; background: #1a1c20; border: 1px solid #2c3038; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+    button:hover { border-color: #8fb0ff; }
+    button.danger { border-color: #5a2a2a; }
+    button.danger:hover { border-color: #ef7a7a; }
+    button:disabled { opacity: .5; cursor: wait; }
+    #log { margin-top: 24px; background: #0f1012; border: 1px solid #24272d; border-radius: 12px; padding: 12px 14px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #9aa0aa; min-height: 60px; white-space: pre-wrap; }
+    label { font-size: 13px; color: #9aa0aa; display: block; margin-top: 10px; }
+    input[type=range] { width: 100%; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Demo site control</h1>
+  <p class="sub">Break the demo container on purpose and watch the Grafana dashboards react. Refreshes every 5 seconds.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Status</h2>
+      <div class="row"><span>Container</span><span class="pill" id="container-state">…</span></div>
+      <div class="row"><span>Site reachable</span><span class="pill" id="site-reachable">…</span></div>
+      <div class="row"><span>Error rate</span><span class="pill" id="fault-error">…</span></div>
+      <div class="row"><span>Added latency</span><span class="pill" id="fault-latency">…</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Container</h2>
+      <p class="sub" style="margin-bottom:0">Stops or pauses the whole service, the way an outage would.</p>
+      <div class="buttons">
+        <button data-container="start">Start</button>
+        <button data-container="stop" class="danger">Stop</button>
+        <button data-container="restart">Restart</button>
+        <button data-container="pause" class="danger">Pause</button>
+        <button data-container="unpause">Unpause</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Faults</h2>
+      <p class="sub" style="margin-bottom:0">Applies to the /api/* routes while the container keeps running.</p>
+      <div class="buttons">
+        <button data-fault="0,0">Healthy</button>
+        <button data-fault="30,0">Errors 30%</button>
+        <button data-fault="100,0" class="danger">Errors 100%</button>
+        <button data-fault="0,2000">Slow +2s</button>
+        <button data-fault="60,1500" class="danger">Meltdown</button>
+      </div>
+      <label for="custom-error">Custom error rate: <span id="custom-error-value">0</span>%
+        <input type="range" id="custom-error" min="0" max="100" value="0"></label>
+      <label for="custom-latency">Custom latency: <span id="custom-latency-value">0</span> ms
+        <input type="range" id="custom-latency" min="0" max="5000" step="100" value="0"></label>
+      <div class="buttons"><button id="apply-custom">Apply custom</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Traffic</h2>
+      <p class="sub" style="margin-bottom:0">Sends requests to the demo site so the graphs have data to show.</p>
+      <div class="buttons">
+        <button data-traffic="20">Send 20</button>
+        <button data-traffic="100">Send 100</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="log">Ready.</div>
+</main>
+
+<script>
+  const log = (msg) => {
+    const el = document.getElementById('log');
+    const stamp = new Date().toLocaleTimeString();
+    el.textContent = `[${stamp}] ${msg}\n` + el.textContent;
+  };
+
+  const post = async (url, body) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    return data;
+  };
+
+  const setPill = (id, text, cls) => {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'pill ' + (cls || '');
+  };
+
+  async function refresh() {
+    try {
+      const s = await (await fetch('/api/status')).json();
+      const stateClass = s.container_state === 'running' ? 'ok' : (s.container_state === 'paused' ? 'warn' : 'bad');
+      setPill('container-state', s.container_state, stateClass);
+      setPill('site-reachable', s.site_reachable ? 'yes' : 'no', s.site_reachable ? 'ok' : 'bad');
+      setPill('fault-error', `${s.fault.error_rate ?? '–'}%`, s.fault.error_rate > 0 ? 'bad' : 'ok');
+      setPill('fault-latency', `${s.fault.latency_ms ?? '–'} ms`, s.fault.latency_ms > 0 ? 'warn' : 'ok');
+    } catch (e) {
+      setPill('container-state', 'panel error', 'bad');
+    }
+  }
+
+  document.querySelectorAll('[data-container]').forEach((btn) => {
+    btn.addEventListener('click', () => run(btn, async () => {
+      const r = await post(`/api/container/${btn.dataset.container}`);
+      log(`${r.action} ${r.container}: now ${r.state}`);
+    }));
+  });
+
+  document.querySelectorAll('[data-fault]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const [error_rate, latency_ms] = btn.dataset.fault.split(',').map(Number);
+      run(btn, async () => {
+        await applyFault(error_rate, latency_ms);
+      });
+    });
+  });
+
+  async function applyFault(error_rate, latency_ms) {
+    await post('/api/fault', { error_rate, latency_ms });
+    log(`fault set: ${error_rate}% errors, ${latency_ms} ms latency`);
+    refresh();
+  }
+
+  const customError = document.getElementById('custom-error');
+  const customLatency = document.getElementById('custom-latency');
+  customError.addEventListener('input', () => document.getElementById('custom-error-value').textContent = customError.value);
+  customLatency.addEventListener('input', () => document.getElementById('custom-latency-value').textContent = customLatency.value);
+  document.getElementById('apply-custom').addEventListener('click', (e) => run(e.currentTarget, () =>
+    applyFault(Number(customError.value), Number(customLatency.value))));
+
+  document.querySelectorAll('[data-traffic]').forEach((btn) => {
+    btn.addEventListener('click', () => run(btn, async () => {
+      const r = await post('/api/traffic', { count: Number(btn.dataset.traffic) });
+      log(`sent ${r.sent} requests: ${r.ok} ok, ${r.failed} failed`);
+    }));
+  });
+
+  async function run(btn, task) {
+    btn.disabled = true;
+    try {
+      await task();
+    } catch (e) {
+      log(`error: ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      refresh();
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>

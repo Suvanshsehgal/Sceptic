@@ -120,6 +120,17 @@ services:
     networks:
       - sceptic-network
 
+  demo-site:
+    build:
+      context: ./demo/site
+      dockerfile: Dockerfile
+    container_name: sceptic-demo-site
+    restart: unless-stopped
+    ports:
+      - "${DEMO_SITE_PORT:-8090}:8090"
+    networks:
+      - sceptic-network
+
   prometheus:
     image: prom/prometheus:v2.51.0
     container_name: sceptic-prometheus
@@ -154,7 +165,6 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
     volumes:
       - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./infra/grafana/dashboards/definitions:/etc/grafana/provisioning/dashboards/definitions:ro
       - grafana_data:/var/lib/grafana
     depends_on:
