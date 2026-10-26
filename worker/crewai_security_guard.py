@@ -1,7 +1,17 @@
+"""
+Security-Guard as a CrewAI agent.
+
+The agent's tool is served by the Sceptic MCP tool server (scan_security): Semgrep and Bandit findings,
+optionally triaged by Groq. The scanner evidence is kept even if the LLM step fails.
+"""
 import json
+from typing import Any, Dict, List
+
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import tool
-from security_guard import run_security_scan
+
+from mcp_client import get_mcp_client
+
 
 @tool("Deterministic Security Guard Scanner")
 def security_guard_tool(code_and_path_json: str) -> str:
@@ -10,44 +20,54 @@ def security_guard_tool(code_and_path_json: str) -> str:
     Accepts a JSON string with keys:
     - 'source_code': str
     - 'file_path': Optional[str]
+    - 'run_llm_analysis': Optional[bool] (default true)
     Returns structured security findings.
     """
     try:
         data = json.loads(code_and_path_json)
-        source_code = data["source_code"]
-        file_path = data.get("file_path", "target.py")
-        findings = run_security_scan(source_code, file_path=file_path)
-        return json.dumps(findings, indent=2)
+        args = {
+            "source_code": data["source_code"],
+            "file_path": data.get("file_path", "target.py"),
+            "run_llm_analysis": bool(data.get("run_llm_analysis", True)),
+        }
+        return get_mcp_client().call_tool("scan_security", args)
     except Exception as e:
-        return json.dumps([{"agent_name": "Security-Guard", "severity": "HIGH", "error": str(e)}])
+        return json.dumps([{"agent_name": "Security-Guard", "severity": "HIGH", "status": "ERROR", "error": str(e)}])
+
 
 security_guard_agent = Agent(
     role="Security-Guard",
-    goal="Analyze deterministic security scanner evidence and provide contextual security assessment.",
-    backstory="You are an expert security verification agent. You combine static analysis results from Semgrep and Bandit with contextual intelligence to detect real vulnerabilities and explain their risks accurately.",
+    goal="Analyze deterministic security scanner evidence and provide a contextual security assessment.",
+    backstory=(
+        "You are an expert security verification agent. You combine static analysis results from Semgrep and "
+        "Bandit with contextual intelligence to detect real vulnerabilities and explain their risks accurately."
+    ),
     tools=[security_guard_tool],
-    verbose=True,
-    allow_delegation=False
+    verbose=False,
+    allow_delegation=False,
 )
 
-def analyze_with_security_guard(source_code: str, file_path: str = "target.py") -> str:
+
+def run_security_guard(source_code: str, file_path: str = "target.py", run_llm_analysis: bool = True) -> List[Dict[str, Any]]:
+    """Runs the agent's tool for one source file and returns its findings."""
     payload = json.dumps({
         "source_code": source_code,
-        "file_path": file_path
+        "file_path": file_path,
+        "run_llm_analysis": run_llm_analysis,
     })
+    return json.loads(security_guard_tool.run(payload))
 
+
+def analyze_with_security_guard(source_code: str, file_path: str = "target.py") -> str:
+    """Full CrewAI run (requires an LLM). The pipeline itself uses run_security_guard()."""
+    payload = json.dumps({"source_code": source_code, "file_path": file_path})
     task = Task(
-        description=f"Scan the target code for security vulnerabilities using your deterministic security tool with payload: {payload}. Return the structured security findings verbatim.",
+        description=(
+            "Scan the target code for security vulnerabilities using your deterministic security tool with "
+            f"payload: {payload}. Return the structured security findings verbatim."
+        ),
         expected_output="A structured report of the security findings.",
-        agent=security_guard_agent
+        agent=security_guard_agent,
     )
-
-    crew = Crew(
-        agents=[security_guard_agent],
-        tasks=[task],
-        process=Process.sequential,
-        verbose=True
-    )
-
-    result = crew.kickoff()
-    return str(result)
+    crew = Crew(agents=[security_guard_agent], tasks=[task], process=Process.sequential, verbose=False)
+    return str(crew.kickoff())

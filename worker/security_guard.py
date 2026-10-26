@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
+from llm_client import make_groq_client, llm_blocked, note_llm_error
+
 @dataclass
 class SecurityFinding:
     agent_name: str = "Security-Guard"
@@ -18,6 +20,7 @@ class SecurityFinding:
     scanner: str = "unknown"  # "semgrep" or "bandit"
     rule_id: str = "unknown"
     contextual_analysis: Optional[str] = None
+    status: Optional[str] = None  # "ERROR" when the scanner could not finish; reported, but not counted as a defect
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -30,7 +33,8 @@ class SecurityFinding:
             "evidence": self.evidence,
             "scanner": self.scanner,
             "rule_id": self.rule_id,
-            "contextual_analysis": self.contextual_analysis
+            "contextual_analysis": self.contextual_analysis,
+            "status": self.status
         }
 
 
@@ -42,7 +46,8 @@ class BanditScanner:
         findings: List[SecurityFinding] = []
         base_dir = os.path.dirname(__file__)
         with tempfile.TemporaryDirectory(dir=base_dir) as temp_dir:
-            file_path = os.path.join(temp_dir, file_name)
+            # file_name may carry a directory (e.g. "backend/app.py"); the temp copy only needs its base name.
+            file_path = os.path.join(temp_dir, os.path.basename(file_name))
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(source_code)
 
@@ -99,11 +104,13 @@ class BanditScanner:
                     )
                     findings.append(finding)
             except subprocess.TimeoutExpired:
+                # HIGH, not INFO: a scanner that did not finish must not leave the code looking clean.
                 findings.append(SecurityFinding(
                     agent_name="Security-Guard",
-                    severity="INFO",
-                    title="[BANDIT] Scanner Timeout",
-                    description="Bandit security analysis timed out.",
+                    severity="HIGH",
+                    status="ERROR",
+                    title="[BANDIT] Scanner did not complete (timeout)",
+                    description="Bandit security analysis timed out, so the file was not fully scanned.",
                     file_path=file_name,
                     scanner="bandit",
                     rule_id="TIMEOUT"
@@ -111,8 +118,9 @@ class BanditScanner:
             except Exception as e:
                 findings.append(SecurityFinding(
                     agent_name="Security-Guard",
-                    severity="INFO",
-                    title="[BANDIT] Scanner Execution Error",
+                    severity="HIGH",
+                    status="ERROR",
+                    title="[BANDIT] Scanner did not run",
                     description=f"Error running Bandit: {str(e)}",
                     file_path=file_name,
                     scanner="bandit",
@@ -122,22 +130,49 @@ class BanditScanner:
         return findings
 
 
+WORKER_DIR_FOR_RULES = os.path.dirname(os.path.abspath(__file__))
+# Semgrep can be slow on machines with restricted networks, so the limit is configurable.
+SEMGREP_TIMEOUT_SECONDS = int(os.getenv("SEMGREP_TIMEOUT_SECONDS", "300"))
+
+
+def _semgrep_env() -> Dict[str, str]:
+    """Turns off Semgrep's version check and metrics upload, so scans run offline and deterministically."""
+    env = dict(os.environ)
+    env["SEMGREP_SEND_METRICS"] = "off"
+    env["SEMGREP_ENABLE_VERSION_CHECK"] = "0"
+    return env
+SEMGREP_PACKS = {
+    ".py": "semgrep_rules.yaml",
+    ".js": "semgrep_rules_js.yaml",
+    ".jsx": "semgrep_rules_js.yaml",
+    ".mjs": "semgrep_rules_js.yaml",
+    ".cjs": "semgrep_rules_js.yaml",
+    ".ts": "semgrep_rules_js.yaml",
+    ".tsx": "semgrep_rules_js.yaml",
+    ".java": "semgrep_rules_java.yaml",
+}
+
+
+def rules_for_file(file_name: str) -> str:
+    """Semgrep rule pack for a file's language. Files of other types fall back to the Python pack."""
+    pack = SEMGREP_PACKS.get(os.path.splitext(file_name or "")[1].lower(), "semgrep_rules.yaml")
+    path = os.path.join(WORKER_DIR_FOR_RULES, pack)
+    return path if os.path.exists(path) else "auto"
+
+
 class SemgrepScanner:
     """
-    Executes Semgrep static analysis on Python code and normalizes findings.
+    Executes Semgrep static analysis and normalizes findings. The rule pack depends on the file's language.
     """
     def __init__(self, rules_path: Optional[str] = None):
-        if rules_path:
-            self.rules_path = rules_path
-        else:
-            default_path = os.path.join(os.path.dirname(__file__), "semgrep_rules.yaml")
-            self.rules_path = default_path if os.path.exists(default_path) else "auto"
+        # An explicit rules_path overrides the per-language packs chosen by rules_for_file().
+        self.rules_path = rules_path
 
     def scan_code(self, source_code: str, file_name: str = "target.py") -> List[SecurityFinding]:
         findings: List[SecurityFinding] = []
         base_dir = os.path.dirname(__file__)
         with tempfile.TemporaryDirectory(dir=base_dir) as temp_dir:
-            file_path = os.path.join(temp_dir, file_name)
+            file_path = os.path.join(temp_dir, os.path.basename(file_name))
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(source_code)
 
@@ -152,7 +187,8 @@ class SemgrepScanner:
                     else:
                         semgrep_bin = "semgrep"
 
-                cmd = [semgrep_bin, "scan", "--config", self.rules_path, "--json", "--no-git-ignore", file_path]
+                config = self.rules_path or rules_for_file(file_name)
+                cmd = [semgrep_bin, "scan", "--config", config, "--json", "--no-git-ignore", file_path]
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,
@@ -160,7 +196,8 @@ class SemgrepScanner:
                     encoding="utf-8",
                     errors="replace",
                     stdin=subprocess.DEVNULL,
-                    timeout=20
+                    timeout=SEMGREP_TIMEOUT_SECONDS,
+                    env=_semgrep_env(),
                 )
                 output = proc.stdout.strip()
 
@@ -209,9 +246,10 @@ class SemgrepScanner:
             except subprocess.TimeoutExpired:
                 findings.append(SecurityFinding(
                     agent_name="Security-Guard",
-                    severity="INFO",
-                    title="[SEMGREP] Scanner Timeout",
-                    description="Semgrep security analysis timed out.",
+                    severity="HIGH",
+                    status="ERROR",
+                    title="[SEMGREP] Scanner did not complete (timeout)",
+                    description="Semgrep security analysis timed out, so the file was not fully scanned.",
                     file_path=file_name,
                     scanner="semgrep",
                     rule_id="TIMEOUT"
@@ -220,8 +258,9 @@ class SemgrepScanner:
                 # Handle scanner failure gracefully without crashing
                 findings.append(SecurityFinding(
                     agent_name="Security-Guard",
-                    severity="INFO",
-                    title="[SEMGREP] Scanner Execution Error",
+                    severity="HIGH",
+                    status="ERROR",
+                    title="[SEMGREP] Scanner did not run",
                     description=f"Error running Semgrep: {str(e)}",
                     file_path=file_name,
                     scanner="semgrep",
@@ -238,9 +277,9 @@ class GroqContextualAnalyzer:
     Provides contextual analysis over deterministic scanner findings using Groq.
     Does NOT replace scanner evidence; provides true-positive validation and exploit assessment.
     """
-    def __init__(self, api_key: Any = _UNSET, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, api_key: Any = _UNSET, model: Optional[str] = None):
         self.api_key = os.getenv("GROQ_API_KEY") if api_key is _UNSET else api_key
-        self.model = model
+        self.model = model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
     def analyze_findings(
         self,
@@ -254,10 +293,13 @@ class GroqContextualAnalyzer:
             for f in findings:
                 f.contextual_analysis = "Deterministic finding verified. Contextual LLM analysis skipped (no GROQ_API_KEY)."
             return findings
+        if llm_blocked():
+            for f in findings:
+                f.contextual_analysis = "Deterministic finding preserved. Contextual LLM analysis skipped: daily Groq quota reached."
+            return findings
 
         try:
-            from groq import Groq
-            client = Groq(api_key=self.api_key)
+            client = make_groq_client(self.api_key)
 
             findings_summary = "\n".join([
                 f"- Scanner: {f.scanner}, Rule: {f.rule_id}, Severity: {f.severity}, Line: {f.line_number}\n"
@@ -299,6 +341,7 @@ Provide an analysis for each finding clearly labeled by Rule/Scanner.
                 f.contextual_analysis = llm_text
         except Exception as e:
             # Graceful fallback: Never discard scanner evidence on LLM failure
+            note_llm_error(e)
             for f in findings:
                 f.contextual_analysis = f"Deterministic finding preserved. Contextual LLM analysis failed: {str(e)}"
 
