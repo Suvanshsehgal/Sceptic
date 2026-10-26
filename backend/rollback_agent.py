@@ -23,9 +23,11 @@ Workflow:
    - State alignment (mark failed as ROLLED_BACK, target as ACTIVE, resolve drift events)
 7. Persist complete audit record in rollback_records table
 """
+import os
+import shlex
 import logging
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, Tuple
 from uuid import UUID
 
@@ -35,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 import schemas
+from alerts import dispatch_alert
 from app_config import get_settings
 
 
@@ -49,10 +52,19 @@ class RollbackExecutor:
         raise NotImplementedError
 
 
+class RollbackExecutorNotConfigured(RuntimeError):
+    """Raised when no rollback command is configured, so no service was switched."""
+
+
 class DefaultRollbackExecutor(RollbackExecutor):
     """
-    Default container and service recovery executor.
-    Supports container orchestration update or simulated execution in hermetic environments.
+    Switches the running service by running the operator-configured ROLLBACK_COMMAND.
+
+    The command is split with shlex and run without a shell. These placeholders are filled in:
+    {commit_sha}, {image_name}, {image_tag}, {environment}, {deployment_id}, {target_deployment_id}.
+    Example: ROLLBACK_COMMAND="python scripts/switch_image.py --image {image_name}:{image_tag}"
+
+    Without ROLLBACK_COMMAND nothing is switched, and the rollback is recorded as FAILED.
     """
     def __init__(self, target_url: Optional[str] = None):
         settings = get_settings()
@@ -63,8 +75,39 @@ class DefaultRollbackExecutor(RollbackExecutor):
             f"Executing rollback from deployment {deployment.id} ({deployment.commit_sha}) "
             f"to target deployment {target_deployment.id} ({target_deployment.commit_sha})"
         )
-        # In multi-container environments, orchestrator (Docker/Compose) switches the image tag/env.
-        # Here we log and perform any required webhook or container reload.
+        template = os.getenv("ROLLBACK_COMMAND", "").strip()
+        if not template:
+            raise RollbackExecutorNotConfigured(
+                "ROLLBACK_COMMAND is not set. No service was switched, so the rollback was not performed."
+            )
+
+        values = {
+            "commit_sha": target_deployment.commit_sha,
+            "image_name": target_deployment.image_name,
+            "image_tag": target_deployment.image_tag,
+            "environment": target_deployment.environment,
+            "deployment_id": str(deployment.id),
+            "target_deployment_id": str(target_deployment.id),
+        }
+        argv = [part.format(**values) for part in shlex.split(template)]
+        timeout = get_settings().ROLLBACK_COMMAND_TIMEOUT
+
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.communicate()
+            raise RuntimeError(f"Rollback command timed out after {timeout} seconds.")
+
+        if proc.returncode != 0:
+            tail = (stderr or stdout or b"").decode("utf-8", errors="replace").strip()[-500:]
+            raise RuntimeError(f"Rollback command exited with code {proc.returncode}: {tail}")
+
         await asyncio.sleep(get_settings().ROLLBACK_SERVICE_READY_WAIT)
         return True
 
@@ -198,6 +241,69 @@ class RollbackAgent:
 
         return None, "No previous known-good deployment found for this project."
 
+    async def _notify_rollback(
+        self,
+        deployment: models.Deployment,
+        target: models.Deployment,
+        record: models.RollbackRecord
+    ) -> None:
+        """Alerts on completed rollbacks (SUCCESS or FAILED). Best effort: a delivery problem never changes the outcome."""
+        await dispatch_alert(
+            title=f"Sceptic rollback {record.status} on {deployment.environment}",
+            details={
+                "deployment_id": str(deployment.id),
+                "rolled_back_to": f"{target.commit_sha[:12]} ({target.id})",
+                "trigger": record.trigger_source,
+                "reason": record.reason,
+                "error": record.error_message or "none",
+            },
+        )
+
+    async def _find_active_rollback(
+        self,
+        project_id: UUID,
+        db: AsyncSession,
+        expire_stale: bool = False
+    ) -> Optional[models.RollbackRecord]:
+        """
+        Returns a rollback that holds the project lock (IN_PROGRESS or PENDING).
+        A record older than ROLLBACK_LOCK_TIMEOUT_SECONDS is stale (its run most likely crashed) and does not
+        hold the lock. With expire_stale=True the stale records are also marked FAILED.
+        """
+        stmt = (
+            select(models.RollbackRecord)
+            .join(models.Deployment, models.RollbackRecord.deployment_id == models.Deployment.id)
+            .filter(
+                models.Deployment.project_id == project_id,
+                models.RollbackRecord.status.in_(["IN_PROGRESS", "PENDING"])
+            )
+            .order_by(models.RollbackRecord.created_at.desc())
+        )
+        res = await db.execute(stmt)
+        records = res.scalars().all()
+
+        timeout_seconds = get_settings().ROLLBACK_LOCK_TIMEOUT_SECONDS
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)
+        active: Optional[models.RollbackRecord] = None
+        expired_any = False
+        for record in records:
+            created = record.created_at
+            if created is not None and created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created is not None and created < cutoff:
+                if expire_stale:
+                    record.status = "FAILED"
+                    record.completed_at = datetime.now(timezone.utc)
+                    record.error_message = f"Stale rollback lock expired after {timeout_seconds} seconds."
+                    expired_any = True
+                continue
+            if active is None:
+                active = record
+
+        if expired_any:
+            logger.warning(f"rollback_stale_lock_expired: project_id={project_id}")
+        return active
+
     # ========================================================
     # STEP 3: SAFETY VERIFICATION
     # ========================================================
@@ -310,16 +416,7 @@ class RollbackAgent:
 
         # Check 5: Rollback Concurrency Lock
         # Ensure no active rollback is currently IN_PROGRESS or PENDING for this project
-        lock_stmt = (
-            select(models.RollbackRecord)
-            .join(models.Deployment, models.RollbackRecord.deployment_id == models.Deployment.id)
-            .filter(
-                models.Deployment.project_id == deployment.project_id,
-                models.RollbackRecord.status.in_(["IN_PROGRESS", "PENDING"])
-            )
-        )
-        lock_res = await db.execute(lock_stmt)
-        active_rollback = lock_res.scalars().first()
+        active_rollback = await self._find_active_rollback(deployment.project_id, db)
 
         if active_rollback:
             safety_checks["rollback_lock"] = {
@@ -547,6 +644,46 @@ class RollbackAgent:
             )
 
         # 5. Acquire Lock & Mark IN_PROGRESS
+        # Lock the project row so two rollbacks on the same project cannot both pass the check above.
+        # The row lock is held until the commit that inserts the IN_PROGRESS record.
+        await db.execute(
+            select(models.Project.id)
+            .filter(models.Project.id == deployment.project_id)
+            .with_for_update()
+        )
+        concurrent = await self._find_active_rollback(deployment.project_id, db, expire_stale=True)
+        if concurrent is not None:
+            safety_checks["rollback_lock"] = {
+                "passed": False,
+                "detail": (
+                    f"Rollback lock acquisition failed: Concurrent rollback operation {concurrent.id} "
+                    f"is currently {concurrent.status} on this project."
+                )
+            }
+            aborted_record = models.RollbackRecord(
+                deployment_id=deployment.id,
+                target_deployment_id=target.id,
+                reason=reason,
+                trigger_source=trigger_source,
+                status="ABORTED",
+                safety_check_result=safety_checks,
+                started_at=now,
+                completed_at=datetime.now(timezone.utc),
+                error_message=f"Safety checks failed: Concurrent rollback operation {concurrent.id} is in progress"
+            )
+            db.add(aborted_record)
+            await db.commit()
+            await db.refresh(aborted_record)
+            return schemas.RollbackExecutionResponse(
+                rollback_record=schemas.RollbackRecordResponse.model_validate(aborted_record),
+                status="ABORTED",
+                success=False,
+                deployment_id=deployment.id,
+                target_deployment_id=target.id,
+                safety_checks=safety_checks,
+                message=f"Rollback aborted by safety controller: concurrent rollback {concurrent.id} in progress"
+            )
+
         logger.info(f"rollback_lock_acquired: deployment_id={deployment.id} target_id={target.id}")
         record = models.RollbackRecord(
             deployment_id=deployment.id,
@@ -576,6 +713,7 @@ class RollbackAgent:
                 record.error_message = f"Execution failure: {str(e)}"
                 await db.commit()
                 await db.refresh(record)
+                await self._notify_rollback(deployment, target, record)
 
                 return schemas.RollbackExecutionResponse(
                     rollback_record=schemas.RollbackRecordResponse.model_validate(record),
@@ -598,6 +736,7 @@ class RollbackAgent:
                 deployment.status = "FAILED"
                 await db.commit()
                 await db.refresh(record)
+                await self._notify_rollback(deployment, target, record)
 
                 return schemas.RollbackExecutionResponse(
                     rollback_record=schemas.RollbackRecordResponse.model_validate(record),
@@ -630,6 +769,7 @@ class RollbackAgent:
 
             await db.commit()
             await db.refresh(record)
+            await self._notify_rollback(deployment, target, record)
 
             logger.info(
                 f"rollback_succeeded: deployment_id={deployment.id} "

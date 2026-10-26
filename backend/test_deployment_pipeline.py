@@ -98,9 +98,9 @@ def test_trust_score_deployment_gate():
     assert "halted" in msg3.lower()
     assert "BLOCK" in msg3
 
-    # Default / None: No gate restriction
+    # None: fail closed. A deployment with no verdict is unverified.
     ok_none, _ = evaluate_trust_gate(None)
-    assert ok_none is True
+    assert ok_none is False
 
 
 # ========================================================
@@ -252,6 +252,7 @@ async def test_failed_deployment_becomes_failed():
             target_url="http://broken-target:8080",
             backend_url="http://test",
             api_token=token,
+            trust_recommendation="APPROVE",
             timeout_seconds=1.0,
             client=test_client
         )

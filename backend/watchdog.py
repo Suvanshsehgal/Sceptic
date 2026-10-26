@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 import schemas
+from alerts import dispatch_alert
 from app_config import get_settings
 
 
@@ -384,6 +385,16 @@ class PipelineWatchdog:
                 f"watchdog_check_completed: deployment_id={deployment.id} "
                 f"status={overall_status} findings_count={len(all_findings)}"
             )
+
+            if overall_status == schemas.VerificationStatus.FAIL:
+                await dispatch_alert(
+                    title=f"Sceptic Watchdog breach on {deployment.environment} ({deployment.commit_sha[:12]})",
+                    details={
+                        "deployment_id": str(deployment.id),
+                        "findings": ", ".join(sorted({f.finding_type for f in all_findings})),
+                        "summary": summary,
+                    },
+                )
 
             return schemas.WatchdogCheckResult(
                 deployment_id=deployment.id,

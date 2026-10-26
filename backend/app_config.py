@@ -56,6 +56,15 @@ class Settings:
     def ROLLBACK_SERVICE_READY_WAIT(self) -> float:
         return float(os.getenv("ROLLBACK_SERVICE_READY_WAIT", "1.0"))
 
+    @property
+    def ROLLBACK_LOCK_TIMEOUT_SECONDS(self) -> int:
+        # An IN_PROGRESS rollback older than this is treated as crashed and no longer blocks the project.
+        return int(os.getenv("ROLLBACK_LOCK_TIMEOUT_SECONDS", "900"))
+
+    @property
+    def ROLLBACK_COMMAND_TIMEOUT(self) -> float:
+        return float(os.getenv("ROLLBACK_COMMAND_TIMEOUT", "300"))
+
 
 settings = Settings()
 

@@ -201,9 +201,16 @@ async def test_cascade_deletion():
 
 @pytest.mark.anyio
 async def test_get_audits_endpoint():
-    """Verify GET /audits and GET /audits/{id} retrieve real audit records with findings."""
+    """Verify GET /audits and GET /audits/{id} retrieve real audit records with findings for the owner."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        login = await client.get("/auth/google/callback", params={"mock_email": "dbowner@example.com"})
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        proj = await client.post("/projects", json={"name": "DB Owner Project"}, headers=headers)
+        owner_project_id = uuid.UUID(proj.json()["id"])
+
     async with TestAsyncSessionLocal() as db:
-        pr = models.PullRequest(repository="test/repo", pr_number=7, latest_commit_sha="sha77")
+        pr = models.PullRequest(repository="test/repo", pr_number=7, latest_commit_sha="sha77", project_id=owner_project_id)
         db.add(pr)
         await db.commit()
 
@@ -221,10 +228,9 @@ async def test_get_audits_endpoint():
         await db.refresh(audit)
         audit_uuid = str(audit.id)
 
-    transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         # GET /audits list
-        res_list = await client.get("/audits")
+        res_list = await client.get("/audits", headers=headers)
         assert res_list.status_code == 200
         items = res_list.json()
         assert len(items) == 1
@@ -233,7 +239,7 @@ async def test_get_audits_endpoint():
         assert items[0]["pull_request"]["repository"] == "test/repo"
 
         # GET /audits/{id}
-        res_single = await client.get(f"/audits/{audit_uuid}")
+        res_single = await client.get(f"/audits/{audit_uuid}", headers=headers)
         assert res_single.status_code == 200
         single_item = res_single.json()
         assert single_item["id"] == audit_uuid
@@ -241,5 +247,5 @@ async def test_get_audits_endpoint():
 
         # Not found 404
         random_uuid = str(uuid.uuid4())
-        res_404 = await client.get(f"/audits/{random_uuid}")
+        res_404 = await client.get(f"/audits/{random_uuid}", headers=headers)
         assert res_404.status_code == 404

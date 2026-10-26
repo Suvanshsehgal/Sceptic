@@ -290,6 +290,8 @@ class AuditRun(Base):
     summary = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
+    # Live progress written by the worker after each agent finishes; read by the SSE stream endpoint.
+    progress = Column(JSON, nullable=True)
     idempotency_key = Column(String(255), nullable=False, unique=True, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=True)

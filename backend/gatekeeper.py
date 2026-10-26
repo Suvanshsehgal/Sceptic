@@ -16,6 +16,7 @@ Verifies:
 
 CRITICAL: NO ROLLBACK OR RECOVERY IS PERFORMED.
 """
+import os
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
@@ -28,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 import schemas
 from app_config import get_settings
+from workflow_guard import unapproved_workflow_changes, approved_commits_from_env
 
 
 logger = logging.getLogger("sceptic.gatekeeper")
@@ -325,6 +327,51 @@ class DeploymentGatekeeper:
                         description="Runtime image digest unavailable from target service metadata.",
                         detected_at=datetime.now(timezone.utc)
                     ))
+
+            # 6b. Workflow change guard: CI/CD workflow files changed since the previous deployment need approval.
+            # Runs only when GATEKEEPER_REPO_PATH is set and the deployment links to its previous deployment.
+            repo_path = os.getenv("GATEKEEPER_REPO_PATH", "").strip()
+            if repo_path and deployment.previous_deployment_id:
+                previous = await db.get(models.Deployment, deployment.previous_deployment_id)
+                if previous is not None:
+                    try:
+                        unapproved_paths = unapproved_workflow_changes(
+                            repo_path, previous.commit_sha, deployment.commit_sha, approved_commits_from_env()
+                        )
+                    except RuntimeError as e:
+                        unapproved_paths = []
+                        findings.append(schemas.GatekeeperFinding(
+                            finding_type="UNRESOLVED",
+                            severity="MEDIUM",
+                            expected_value="Workflow changes checked",
+                            actual_value="check failed",
+                            description=f"Workflow change check could not run: {e}",
+                            detected_at=datetime.now(timezone.utc)
+                        ))
+                    for path in unapproved_paths:
+                        desc = (
+                            f"Workflow file '{path}' changed between {previous.commit_sha[:12]} and "
+                            f"{deployment.commit_sha[:12]} without approval."
+                        )
+                        findings.append(schemas.GatekeeperFinding(
+                            finding_type="WORKFLOW_CHANGE_UNAPPROVED",
+                            severity="HIGH",
+                            expected_value="No unapproved workflow changes",
+                            actual_value=path,
+                            description=desc,
+                            detected_at=datetime.now(timezone.utc)
+                        ))
+                        created = await self._persist_drift_idempotent(
+                            db=db,
+                            deployment_id=deployment.id,
+                            drift_type="WORKFLOW",
+                            expected_val="approved workflow change",
+                            actual_val=path,
+                            severity="HIGH",
+                            description=desc
+                        )
+                        if created:
+                            drift_events_created += 1
 
             # 7. Overall Status Evaluation
             has_failures = any(
