@@ -15,6 +15,7 @@ if sys.platform == "win32":
             pass
 
 import json
+import shutil
 import webbrowser
 import subprocess
 from pathlib import Path
@@ -39,18 +40,32 @@ from rich.table import Table
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
+# This folder holds the CLI's own modules (config, auth_manager, theme). The installed `sceptic` command imports
+# this file as a package, so make its folder importable explicitly.
+CLI_DIR = os.path.dirname(os.path.abspath(__file__))
+if CLI_DIR not in sys.path:
+    sys.path.insert(0, CLI_DIR)
+
 from audit_service import AuditService
 
 from config import CLIConfig
 from auth_manager import AuthManager
+import theme
 
 app = typer.Typer(
     name="sceptic",
-    help="Sceptic: Independent AI-Generated Code Verification System",
+    help=(
+        "[bold cyan]Sceptic[/bold cyan] verifies AI-generated code before it is merged or deployed.\n\n"
+        "Run [bold]sceptic[/bold] with no arguments for the interactive menu. "
+        "Use [bold]sceptic COMMAND --help[/bold] for details on any command."
+    ),
+    rich_markup_mode="rich",
     add_completion=False,
-    no_args_is_help=False
+    no_args_is_help=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
-console = Console()
+console = theme.console
+err_console = theme.err_console
 
 EXIT_SUCCESS = 0
 EXIT_AUDIT_FAILURE = 1
@@ -74,12 +89,23 @@ def prompt_input(label: str, default: str = "") -> str:
         raise
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        theme.console.print(f"{theme.APP_NAME} {theme.APP_VERSION}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
-def main_callback(ctx: typer.Context):
+def main_callback(
+    ctx: typer.Context,
+    no_color: bool = typer.Option(False, "--no-color", help="Disable colors and styling. Also honored: NO_COLOR."),
+    version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True, help="Show the version and exit."),
+):
     """
     Sceptic CLI: Independent AI-generated code verification.
     When run without arguments, launches the interactive terminal dashboard.
     """
+    theme.set_no_color(no_color)
     if ctx.invoked_subcommand is None:
         interactive_dashboard()
 
@@ -317,7 +343,7 @@ def execute_register(
         raise typer.Exit(code=EXIT_CLI_ERROR)
 
 
-@app.command(name="login")
+@app.command(name="login", rich_help_panel="Account")
 def login(
     email: Optional[str] = typer.Option(None, "--email", "-e", help="Login with email address."),
     password: Optional[str] = typer.Option(None, "--password", "-p", help="Login password."),
@@ -335,7 +361,7 @@ def login(
     execute_login(email=clean_email, password=clean_pw, google=clean_google, mock_email=clean_mock)
 
 
-@app.command(name="register")
+@app.command(name="register", rich_help_panel="Account")
 def register(
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Your full name."),
     email: Optional[str] = typer.Option(None, "--email", "-e", help="Email address to register."),
@@ -351,7 +377,7 @@ def register(
     execute_register(name=clean_name, email=clean_email, password=clean_pw)
 
 
-@app.command(name="logout")
+@app.command(name="logout", rich_help_panel="Account")
 def logout():
     """
     Clear CLI's locally stored authentication credentials.
@@ -360,7 +386,7 @@ def logout():
     console.print("[bold green]Successfully logged out from CLI.[/bold green]")
 
 
-@app.command(name="whoami")
+@app.command(name="whoami", rich_help_panel="Account")
 def whoami():
     """
     Display current authenticated user profile.
@@ -395,7 +421,7 @@ def whoami():
 # 2. PROJECT COMMANDS
 # ========================================================
 
-@app.command(name="project")
+@app.command(name="project", rich_help_panel="Projects and features")
 def project_cmd(
     select_id: Optional[str] = typer.Option(None, "--select", help="Project ID to select as active."),
     create_name: Optional[str] = typer.Option(None, "--create", help="Create and select a new project by name."),
@@ -473,7 +499,7 @@ def project_cmd(
 # 3. FEATURE ANALYSIS COMMAND
 # ========================================================
 
-@app.command(name="newfeature")
+@app.command(name="newfeature", rich_help_panel="Projects and features")
 def newfeature(
     description: str = typer.Argument(..., help="Feature proposal description to analyze.")
 ):
@@ -537,7 +563,7 @@ def newfeature(
 # 4. HISTORY, STATUS & DOCTOR COMMANDS
 # ========================================================
 
-@app.command(name="history")
+@app.command(name="history", rich_help_panel="Projects and features")
 def history():
     """
     Display audit and feature analysis history for the current project.
@@ -599,7 +625,7 @@ def history():
     console.print(f_table)
 
 
-@app.command(name="status")
+@app.command(name="status", rich_help_panel="Operations")
 def status():
     """
     Display current user, active project, and backend connectivity.
@@ -690,7 +716,7 @@ def status():
     console.print(table)
 
 
-@app.command(name="watchdog")
+@app.command(name="watchdog", rich_help_panel="Operations")
 def watchdog_cmd(
     deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to verify"),
 ):
@@ -759,7 +785,7 @@ def watchdog_cmd(
         console.print(f_table)
 
 
-@app.command(name="gatekeeper")
+@app.command(name="gatekeeper", rich_help_panel="Operations")
 def gatekeeper_cmd(
     deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to verify"),
 ):
@@ -829,7 +855,7 @@ def gatekeeper_cmd(
         console.print(f_table)
 
 
-@app.command(name="rollback")
+@app.command(name="rollback", rich_help_panel="Operations")
 def rollback_cmd(
     deployment_id: Optional[str] = typer.Argument(None, help="Deployment UUID to roll back"),
     target: Optional[str] = typer.Option(None, "--target", "-t", help="Specific target deployment UUID to restore"),
@@ -973,54 +999,149 @@ def rollback_cmd(
 
 
 
-@app.command(name="doctor")
+@app.command(name="doctor", rich_help_panel="System")
 def doctor():
     """
-    Perform local environment checks and diagnostics.
+    Check the tools Sceptic relies on, and say what to install for anything missing.
     """
-    table = Table(title="Sceptic Environment Diagnostics", border_style="cyan")
-    table.add_column("Check", style="bold")
-    table.add_column("Status")
-    table.add_column("Detail", style="dim")
+    theme.header("Environment check")
+    checks = _environment_checks()
 
-    # 1. Python version
-    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    table.add_row("Python Runtime", "[green]OK[/green]", f"Version {py_ver}")
+    grid = theme.table(None, [
+        ("Check", {"style": "bold", "no_wrap": True}),
+        ("Status", {"no_wrap": True}),
+        ("Detail", {"style": theme.MUTED, "overflow": "fold"}),
+        ("Next step", {"style": theme.WARNING, "overflow": "fold"}),
+    ])
+    for name, state, detail, hint in checks:
+        grid.add_row(name, theme.status_text(state), detail, hint if state in ("fail", "warn") else "")
+    console.print(grid)
 
-    # 2. Git
+    counts = {s: sum(1 for c in checks if c[1] == s) for s in ("ok", "fail", "warn", "info")}
+    parts = [f"{counts['ok']} passed"]
+    if counts["warn"]:
+        parts.append(f"{counts['warn']} {'warning' if counts['warn'] == 1 else 'warnings'}")
+    if counts["fail"]:
+        parts.append(f"{counts['fail']} need{'s' if counts['fail'] == 1 else ''} attention")
+    console.print()
+    console.print(Text(" · ".join(parts), style="bold"))
+    console.print(Text(theme.legend_for_symbols(), style=theme.MUTED))
+
+
+def _run_quiet(cmd, timeout: int = 10) -> Optional[str]:
+    """Runs a command and returns its first output line, or None when it cannot run or fails."""
     try:
-        git_ver = subprocess.check_output(["git", "--version"], text=True).strip()
-        table.add_row("Git", "[green]OK[/green]", git_ver)
-    except Exception:
-        table.add_row("Git", "[yellow]Warning[/yellow]", "Git binary not found on PATH")
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = (proc.stdout or proc.stderr or "").strip().splitlines()
+    return lines[0].strip() if lines else ""
 
-    # 3. Docker
-    try:
-        docker_ver = subprocess.check_output(["docker", "--version"], text=True).strip()
-        table.add_row("Docker", "[green]OK[/green]", docker_ver)
-    except Exception:
-        table.add_row("Docker", "[yellow]Not Available[/yellow]", "Docker daemon/CLI not detected")
 
-    # 4. Backend Connectivity
+def _which_or_path(name: str, env_override: Optional[str] = None) -> Optional[str]:
+    if env_override and os.path.exists(os.getenv(env_override, "")):
+        return os.getenv(env_override)
+    return shutil.which(name)
+
+
+def _environment_checks():
+    """Returns (check, state, detail, next_step) rows for the doctor table."""
+    rows = []
+    rows.append(("Python", "ok", f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}", ""))
+
+    git = _run_quiet(["git", "--version"])
+    git_version = git.replace("git version ", "") if git else None
+    rows.append(("Git", "ok" if git else "warn", git_version or "not found", "" if git else "Install Git: https://git-scm.com"))
+
+    docker_server = _run_quiet(["docker", "version", "--format", "{{.Server.Version}}"])
+    if docker_server:
+        rows.append(("Docker", "ok", f"daemon {docker_server}", ""))
+        image = _run_quiet(["docker", "image", "inspect", "sceptic-sandbox:latest", "--format", "{{.Id}}"])
+        rows.append((
+            "Sandbox image", "ok" if image else "warn",
+            "image present" if image else "image not built",
+            "" if image else "docker build -t sceptic-sandbox:latest -f worker/sandbox/Dockerfile worker",
+        ))
+    else:
+        rows.append(("Docker", "fail", "daemon not reachable", "Start Docker, then re-run the check"))
+        rows.append(("Sandbox image", "warn", "cannot check without Docker", "Start Docker first"))
+
+    javac = shutil.which("javac")
+    rows.append((
+        "Java (javac)", "ok" if javac else "warn",
+        (_run_quiet(["javac", "-version"]) or "found") if javac else "not found",
+        "" if javac else "Install a JDK 17 or newer to check Java code",
+    ))
+
+    node = shutil.which("node")
+    rows.append((
+        "Node.js", "ok" if node else "warn",
+        (_run_quiet(["node", "--version"]) or "found") if node else "not found",
+        "" if node else "Install Node.js 18 or newer to check JavaScript and TypeScript",
+    ))
+
+    tsc = os.path.join(root_dir, "worker", "tools", "js", "node_modules", "typescript", "bin", "tsc")
+    rows.append((
+        "TypeScript compiler", "ok" if os.path.exists(tsc) else "warn",
+        "worker/tools/js" if os.path.exists(tsc) else "not installed",
+        "" if os.path.exists(tsc) else "cd worker/tools/js && npm ci",
+    ))
+
+    maven = shutil.which("mvn")
+    rows.append((
+        "Maven", "ok" if maven else "info",
+        "found" if maven else "not found (optional)",
+        "" if maven else "Optional: lets Java dependencies resolve for type checks",
+    ))
+
+    gitleaks = shutil.which("gitleaks")
+    rows.append((
+        "gitleaks", "ok" if gitleaks else "warn",
+        "found" if gitleaks else "not found",
+        "" if gitleaks else "Install gitleaks: github.com/gitleaks/gitleaks",
+    ))
+
+    osv = _which_or_path("osv-scanner", "OSV_SCANNER_PATH")
+    rows.append((
+        "osv-scanner", "ok" if osv else "warn",
+        "found" if osv else "not found",
+        "" if osv else "Install osv-scanner: https://google.github.io/osv-scanner",
+    ))
+
+    semgrep = _which_or_path("semgrep")
+    rows.append((
+        "Semgrep", "ok" if semgrep else "warn",
+        "found" if semgrep else "not found",
+        "" if semgrep else "pip install semgrep",
+    ))
+
     api_url = CLIConfig.get_api_url()
     try:
         with httpx.Client(timeout=3.0) as client:
-            r = client.get(f"{api_url}/health")
-            if r.status_code == 200:
-                table.add_row("Sceptic Backend", "[green]OK[/green]", f"Connected to {api_url}")
-            else:
-                table.add_row("Sceptic Backend", "[red]Error[/red]", f"Returned HTTP {r.status_code}")
-    except Exception as e:
-        table.add_row("Sceptic Backend", "[red]Offline[/red]", str(e))
+            response = client.get(f"{api_url}/health")
+        backend_ok = response.status_code == 200
+        rows.append((
+            "Backend API", "ok" if backend_ok else "fail",
+            api_url if backend_ok else f"{api_url} returned HTTP {response.status_code}",
+            "" if backend_ok else "Check the backend logs",
+        ))
+    except Exception:
+        rows.append((
+            "Backend API", "fail", f"{api_url} is offline",
+            "Start it: uvicorn backend.main:app --port 8000",
+        ))
 
-    # 5. Auth State
-    token = AuthManager.get_token()
-    if token:
-        table.add_row("CLI Authentication", "[green]OK[/green]", "Saved credentials present")
-    else:
-        table.add_row("CLI Authentication", "[yellow]Not Logged In[/yellow]", "Run 'sceptic login'")
+    authenticated = bool(AuthManager.get_token())
+    rows.append((
+        "Sign-in", "ok" if authenticated else "info",
+        "signed in" if authenticated else "not signed in",
+        "" if authenticated else "Run: sceptic login",
+    ))
+    return rows
 
-    console.print(table)
+
 
 
 # ========================================================
@@ -1034,12 +1155,8 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
     service = AuditService()
 
     if not json_output:
-        header_text = Text()
-        header_text.append("SCEPTIC ", style="bold cyan")
-        header_text.append("Code Verification System - CLI\n", style="bold white")
-        header_text.append("Independent AI-Generated Code Auditing", style="dim white")
-        console.print(Panel(header_text, border_style="cyan"))
-        console.print(f"[bold]Target:[/bold] [underline]{path}[/underline]\n")
+        theme.header("Audit")
+        console.print(theme.kv_table([("Target", path)]))
 
     try:
         # Execute audit with live spinner progress
@@ -1056,28 +1173,28 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
         if json_output:
             print(json.dumps({"error": str(e), "exit_code": EXIT_CLI_ERROR}))
         else:
-            console.print(f"[bold red]Path Error:[/bold red] {e}")
+            theme.error(str(e), hint="Check that the path exists and that it is a supported file or directory.", code=EXIT_CLI_ERROR)
         return EXIT_CLI_ERROR
 
     except PermissionError as e:
         if json_output:
             print(json.dumps({"error": str(e), "exit_code": EXIT_CLI_ERROR}))
         else:
-            console.print(f"[bold red]Permission Error:[/bold red] {e}")
+            theme.error(str(e), hint="Check the file permissions, or run the audit as a user that can read the target.", code=EXIT_CLI_ERROR)
         return EXIT_CLI_ERROR
 
     except ValueError as e:
         if json_output:
             print(json.dumps({"error": str(e), "exit_code": EXIT_CLI_ERROR}))
         else:
-            console.print(f"[bold red]Validation Error:[/bold red] {e}")
+            theme.error(str(e), hint="Sceptic audits Python, Java, JavaScript, and TypeScript files.", code=EXIT_CLI_ERROR)
         return EXIT_CLI_ERROR
 
     except Exception as e:
         if json_output:
             print(json.dumps({"error": str(e), "exit_code": EXIT_CLI_ERROR}))
         else:
-            console.print(f"[bold red]Unexpected Error:[/bold red] {e}")
+            theme.error(str(e), hint="Use --json to get the full report. If it persists, report it with the command you ran.", code=EXIT_CLI_ERROR)
         return EXIT_CLI_ERROR
 
     # Output formatting
@@ -1110,8 +1227,8 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
                     headers={"Authorization": f"Bearer {token}"}
                 )
                 if sync_resp.status_code in (200, 201):
-                    console.print(f"\n[bold green]✓ Audit results successfully synced to '{active['name']}' in Web Dashboard![/bold green]")
-                    console.print(f"[dim]View live at: http://localhost:5173 (Audits & Dashboard)[/dim]\n")
+                    theme.success(f"Results synced to project '{active['name']}' in the web dashboard.")
+                    theme.info("Open the web dashboard to inspect this audit.")
         except Exception:
             pass
 
@@ -1120,7 +1237,7 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
     return EXIT_SUCCESS
 
 
-@app.command(name="audit")
+@app.command(name="audit", rich_help_panel="Verification")
 def audit(
     path: str = typer.Argument(
         ...,
@@ -1145,89 +1262,62 @@ def audit(
 
 
 def _display_rich_report(report: dict, verbose: bool = False):
-    score = report.get("trust_score", 0.0)
+    score = float(report.get("trust_score", 0.0))
     recommendation = report.get("recommendation", "UNKNOWN")
+    target = report.get("target_path") or "audit"
 
-    if score >= 85 and recommendation == "APPROVE":
-        score_color = "green"
-        rec_color = "bold green"
-    elif score >= 50:
-        score_color = "yellow"
-        rec_color = "bold yellow"
-    else:
-        score_color = "red"
-        rec_color = "bold red"
-
-    # 1. Summary Score Panel
-    score_panel_text = Text()
-    score_panel_text.append(f"TRUST SCORE: {score:.1f} / 100\n", style=f"bold {score_color}")
-    score_panel_text.append(f"RECOMMENDATION: {recommendation}\n\n", style=rec_color)
-    score_panel_text.append(f"{report.get('summary', '')}", style="dim white")
-
-    console.print(Panel(score_panel_text, title="Audit Summary", border_style=score_color))
-
-    # 2. Agent Status Breakdown Table
-    agent_table = Table(title="Verification Agent Statuses", border_style="cyan")
-    agent_table.add_column("Agent", style="bold")
-    agent_table.add_column("Status", justify="center")
-    agent_table.add_column("Findings Contributed", justify="right")
+    console.print()
+    console.print(theme.verdict_panel(score, recommendation, report.get("summary", ""), target))
 
     statuses = report.get("agent_statuses", {})
     contributions = report.get("agent_contributions", {})
-
-    for agent, st in statuses.items():
-        st_color = "green" if st == "OK" else "yellow"
-        cnt = contributions.get(agent, 0)
-        agent_table.add_row(agent, f"[{st_color}]{st}[/{st_color}]", str(cnt))
-
-    console.print(agent_table)
-
-    # 3. Severity Breakdown Table
-    sev_table = Table(title="Finding Severity Counts", border_style="magenta")
-    sev_table.add_column("Critical", justify="center", style="bold red")
-    sev_table.add_column("High", justify="center", style="bold yellow")
-    sev_table.add_column("Medium", justify="center", style="yellow")
-    sev_table.add_column("Low", justify="center", style="cyan")
-    sev_table.add_column("Info", justify="center", style="dim")
+    agents = theme.table("Agents", [
+        ("Agent", {"style": "bold", "no_wrap": True}),
+        ("Status", {"no_wrap": True}),
+        ("Findings", {"justify": "right"}),
+    ])
+    for agent, status in statuses.items():
+        agents.add_row(agent, theme.status_text("ok" if status == "OK" else "warn"), str(contributions.get(agent, 0)))
+    console.print(agents)
 
     breakdown = report.get("severity_breakdown", {})
-    sev_table.add_row(
-        str(breakdown.get("CRITICAL", 0)),
-        str(breakdown.get("HIGH", 0)),
-        str(breakdown.get("MEDIUM", 0)),
-        str(breakdown.get("LOW", 0)),
-        str(breakdown.get("INFO", 0)),
-    )
-    console.print(sev_table)
+    line = Text("Severity   ", style=theme.MUTED)
+    for label in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"):
+        line.append_text(theme.severity_text(label))
+        line.append(f" {breakdown.get(label, 0)}    ", style="")
+    console.print(line)
 
-    # 4. Detailed Findings Table (Filtered to meaningful issues to avoid noise)
     findings = report.get("findings", [])
     actionable = [f for f in findings if (f.get("severity") or "INFO").upper() in ("CRITICAL", "HIGH", "MEDIUM", "LOW")]
-    displayed = actionable if actionable else [f for f in findings if not (isinstance(f.get("evidence"), dict) and "called_api" in f.get("evidence", {}))]
+    displayed = actionable if actionable else [
+        f for f in findings if not (isinstance(f.get("evidence"), dict) and "called_api" in f.get("evidence", {}))
+    ]
 
     if displayed:
-        table_title = "Finding Evidence Snippets" if verbose else "Key Verification Findings"
-        f_table = Table(title=table_title, border_style="yellow")
-        f_table.add_column("Agent", style="cyan")
-        f_table.add_column("Severity")
-        f_table.add_column("Title", style="bold")
-        f_table.add_column("Location", style="dim")
-        f_table.add_column("Evidence", no_wrap=True if verbose else False, max_width=None if verbose else 45)
-
-        for f in (displayed if verbose else displayed[:15]):
-            sev = (f.get("severity") or "INFO").upper()
-            col = "red" if sev in ("CRITICAL", "HIGH") else "yellow" if sev == "MEDIUM" else "cyan" if sev == "LOW" else "dim"
-            loc = f"{f.get('file_path', 'target')}:{f.get('line_number') or '-'}"
-            ev = str(f.get("evidence", ""))
-            if not verbose and len(ev) > 50:
-                ev = ev[:47] + "..."
-            f_table.add_row(f.get("agent_name"), f"[{col}]{sev}[/{col}]", str(f.get("title", ""))[:45], loc, ev)
-
-        console.print(f_table)
+        columns = [
+            ("Severity", {"no_wrap": True}),
+            ("Agent", {"style": theme.MUTED, "no_wrap": True}),
+            ("Finding", {"style": "bold", "overflow": "fold", "max_width": 50}),
+            ("Location", {"style": theme.MUTED, "overflow": "fold", "max_width": 36}),
+        ]
+        if verbose:
+            columns.append(("Evidence", {"style": theme.MUTED, "overflow": "fold", "max_width": 60}))
+        shown = displayed if verbose else displayed[:15]
+        grid = theme.table("Findings" if not verbose else "Findings (with evidence)", columns)
+        for f in shown:
+            location = f"{f.get('file_path') or 'target'}:{f.get('line_number') or '-'}"
+            row = [theme.severity_text(f.get("severity")), f.get("agent_name") or "-", str(f.get("title", "")), location]
+            if verbose:
+                evidence = str(f.get("evidence", ""))
+                row.append(evidence if len(evidence) <= 240 else evidence[:237] + "...")
+            grid.add_row(*row)
+        console.print(grid)
         if not verbose and len(displayed) > 15:
-            console.print(f"[dim]Showing top 15 of {len(displayed)} findings. Full details available in Web Dashboard.[/dim]")
+            theme.info(f"Showing 15 of {len(displayed)} findings. Use --verbose for evidence, or open the web dashboard.")
     elif findings:
-        console.print(f"[dim]✓ All {len(findings)} symbols and API calls verified successfully with 0 defects.[/dim]")
+        theme.success(f"All {len(findings)} checks passed with no defects reported.")
+
+
 
 
 # ========================================================
@@ -1236,56 +1326,52 @@ def _display_rich_report(report: dict, verbose: bool = False):
 
 def print_dashboard_banner():
     """
-    Renders a sleek one-line status banner for Sceptic.
+    Renders the status line shown above the interactive menu.
     """
     token = AuthManager.get_token()
     user_info = AuthManager.get_cached_user()
     active_proj = CLIConfig.get_active_project()
 
-    if user_info and token:
-        user_name = user_info.get("name", "User")
-        user_email = user_info.get("email", "")
-        proj_part = f" • Project: [bold cyan]{active_proj['name']}[/bold cyan]" if active_proj else ""
-        header_text = f"⚡ [bold cyan]SCEPTIC[/bold cyan] │ [bold green]{user_name}[/bold green] [dim]<{user_email}>[/dim]{proj_part}"
-        border_col = "green"
+    parts = []
+    if token and user_info:
+        parts.append(f"Signed in as {user_info.get('name', 'user')} <{user_info.get('email', '')}>")
     elif token:
-        header_text = "⚡ [bold cyan]SCEPTIC[/bold cyan] │ [bold green]Authenticated User[/bold green]"
-        border_col = "green"
+        parts.append("Signed in")
     else:
-        header_text = "⚡ [bold cyan]SCEPTIC[/bold cyan] │ [yellow]Authentication Required[/yellow] [dim]• Please Login or Sign Up to access features[/dim]"
-        border_col = "cyan"
-
-    console.print()
-    console.print(Panel(header_text, border_style=border_col, padding=(0, 2)))
+        parts.append("Not signed in")
+    if active_proj:
+        parts.append(f"Project {active_proj['name']}")
+    theme.header(" · ".join(parts))
 
 
 def print_menu_options(is_authenticated: bool):
     """
-    Renders the action selection menu table based on authentication status.
+    Renders the action menu. Actions that need an account are listed only after sign-in.
     """
-    menu = Table(show_header=False, box=None, padding=(0, 2))
-    menu.add_column("Key", style="bold cyan", width=5)
-    menu.add_column("Title", style="bold white", width=26)
-    menu.add_column("Description", style="dim")
-
+    menu = theme.table(None, [
+        ("Key", {"style": f"bold {theme.ACCENT}", "no_wrap": True}),
+        ("Action", {"style": "bold", "no_wrap": True}),
+        ("Description", {"style": theme.MUTED, "overflow": "fold"}),
+    ])
     if not is_authenticated:
-        menu.add_row("[1]", "🔑 Login", "Sign in with Email & Password")
-        menu.add_row("[2]", "📝 Sign Up", "Create new account with Email & Password")
-        menu.add_row("[3]", "🌐 Google Login", "Sign in with Google via browser")
-        menu.add_row("[4]", "⚡ Dev Mock Login", "Instant login for testing")
-        menu.add_row("[5]", "🩺 System Doctor", "Check system environment & tools")
-        menu.add_row("[0]", "🚪 Exit", "Close Sceptic CLI")
+        menu.add_row("1", "Sign in", "Sign in with email and password")
+        menu.add_row("2", "Create account", "Register with email and password")
+        menu.add_row("3", "Continue with Google", "Sign in through your browser")
+        menu.add_row("4", "Demo account", "Development only: quick sign-in for testing")
+        menu.add_row("5", "Check environment", "Verify the tools Sceptic needs")
+        menu.add_row("0", "Exit", "Leave Sceptic")
     else:
-        menu.add_row("[1]", "🔍 Run Audit", "Audit code file, directory, or diff across verification agents")
-        menu.add_row("[2]", "🧪 Verify Feature", "Evaluate feature proposal feasibility, complexity & risk")
-        menu.add_row("[3]", "📁 Projects", "List, switch, or create projects linked to your account")
-        menu.add_row("[4]", "👤 User Profile & Logout", "View account details or sign out")
-        menu.add_row("[5]", "🩺 System Doctor", "Check backend, Python, and tools")
-        menu.add_row("[6]", "📜 History", "Review past audits and feature analyses for active project")
-        menu.add_row("[0]", "🚪 Exit", "Close Sceptic interactive CLI")
-
+        menu.add_row("1", "Run audit", "Verify a file or directory with every agent")
+        menu.add_row("2", "Feature analysis", "Estimate feasibility, complexity, and risk of a change")
+        menu.add_row("3", "Projects", "List, switch, or create projects")
+        menu.add_row("4", "Account", "View your profile or sign out")
+        menu.add_row("5", "Check environment", "Verify the tools Sceptic needs")
+        menu.add_row("6", "History", "Recent audits and feature analyses for the active project")
+        menu.add_row("0", "Exit", "Leave Sceptic")
     console.print(menu)
     console.print()
+
+
 
 
 def _interactive_audit():
@@ -1470,7 +1556,7 @@ def interactive_dashboard():
             choice = Prompt.ask("[bold cyan]sceptic[/bold cyan] > ", default="1").strip()
 
             if choice in ("0", "exit", "quit", "q"):
-                console.print("\n[bold cyan]Goodbye! Keep your AI-generated code verified.[/bold cyan]\n")
+                console.print("\n[dim]Session closed.[/dim]\n")
                 break
 
             if not is_authenticated:
@@ -1534,7 +1620,7 @@ def interactive_dashboard():
                     console.print(f"[yellow]Unknown option '{choice}'. Please select an option [0-6].[/yellow]")
                     Prompt.ask("\n[dim]Press Enter to continue...[/dim]", default="")
         except (KeyboardInterrupt, EOFError):
-            console.print("\n\n[bold cyan]Goodbye! Exiting Sceptic.[/bold cyan]\n")
+            console.print("\n\n[dim]Session closed.[/dim]\n")
             break
 
 

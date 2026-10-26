@@ -28,8 +28,8 @@ def test_cli_whoami_unauthenticated():
 def test_cli_doctor_command():
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == EXIT_SUCCESS
-    assert "Sceptic Environment Diagnostics" in result.stdout
-    assert "Python Runtime" in result.stdout
+    assert "Environment check" in result.stdout and "Backend API" in result.stdout
+    assert "Python" in result.stdout
 
 
 def test_cli_status_command():

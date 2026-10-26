@@ -29,7 +29,7 @@ def test_cli_help():
     """Verify sceptic --help displays usage and available commands."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Sceptic: Independent AI-Generated Code Verification System" in result.stdout
+    assert "Sceptic verifies AI-generated code" in result.stdout
     assert "audit" in result.stdout
 
 
@@ -46,14 +46,14 @@ def test_cli_audit_nonexistent_path():
     """Verify audit returns EXIT_CLI_ERROR (2) when path does not exist."""
     result = runner.invoke(app, ["audit", "nonexistent/invalid_file.py"])
     assert result.exit_code == EXIT_CLI_ERROR
-    assert "Path Error:" in result.stdout or "Path does not exist" in result.stdout
+    assert "Path does not exist" in result.output
 
 
 def test_cli_audit_invalid_file_extension(sample_invalid_extension):
     """Verify audit returns EXIT_CLI_ERROR (2) when file is not a supported source file."""
     result = runner.invoke(app, ["audit", sample_invalid_extension])
     assert result.exit_code == EXIT_CLI_ERROR
-    assert "Validation Error:" in result.stdout or "Unsupported file type" in result.stdout
+    assert "Unsupported file type" in result.output
 
 
 def test_cli_audit_empty_directory(tmp_path):
@@ -62,7 +62,7 @@ def test_cli_audit_empty_directory(tmp_path):
     empty_dir.mkdir()
     result = runner.invoke(app, ["audit", str(empty_dir)])
     assert result.exit_code == EXIT_CLI_ERROR
-    assert "No supported source files found" in result.stdout
+    assert "No supported source files found" in result.output
 
 
 def test_cli_audit_approved_run(sample_clean_code):
@@ -91,9 +91,9 @@ def test_cli_audit_approved_run(sample_clean_code):
     with patch("cli.main.AuditService.audit_path", return_value=mock_report):
         result = runner.invoke(app, ["audit", sample_clean_code])
         assert result.exit_code == EXIT_SUCCESS
-        assert "TRUST SCORE: 92.5 / 100" in result.stdout
-        assert "RECOMMENDATION: APPROVE" in result.stdout
-        assert "Verification Agent Statuses" in result.stdout
+        assert "Trust score" in result.stdout and "92.5 / 100" in result.stdout
+        assert "Verdict" in result.stdout and "APPROVE" in result.stdout
+        assert "Agents" in result.stdout and "Fact-Checker" in result.stdout
 
 
 def test_cli_audit_failure_run(sample_clean_code):
@@ -132,8 +132,8 @@ def test_cli_audit_failure_run(sample_clean_code):
     with patch("cli.main.AuditService.audit_path", return_value=mock_report):
         result = runner.invoke(app, ["audit", sample_clean_code])
         assert result.exit_code == EXIT_AUDIT_FAILURE
-        assert "TRUST SCORE: 40.0 / 100" in result.stdout
-        assert "RECOMMENDATION: BLOCK" in result.stdout
+        assert "Trust score" in result.stdout and "40.0 / 100" in result.stdout
+        assert "Verdict" in result.stdout and "BLOCK" in result.stdout
         assert "Hardcoded" in result.stdout
         assert "Security-Guard" in result.stdout
 
@@ -187,17 +187,19 @@ def test_cli_audit_verbose_flag(sample_clean_code):
     with patch("cli.main.AuditService.audit_path", return_value=mock_report):
         result = runner.invoke(app, ["audit", "-v", sample_clean_code])
         assert result.exit_code == EXIT_AUDIT_FAILURE
-        assert "Finding Evidence Snippets" in result.stdout
-        assert "Call signature: func(foo=1)" in result.stdout
+        assert "Findings (with evidence)" in result.stdout
+        # Long evidence wraps inside its table cell, so check the value rather than the full line.
+        assert "func(foo=1)" in result.stdout
 
 
 def test_cli_interactive_dashboard_exit():
     """Verify invoking sceptic without arguments opens the interactive dashboard box and handles exit."""
-    result = runner.invoke(app, [], input="0\n")
+    with patch("cli.main.AuthManager.get_token", return_value=None), patch("cli.main.AuthManager.get_cached_user", return_value=None):
+        result = runner.invoke(app, [], input="0\n")
     assert result.exit_code == 0
-    assert "SCEPTIC" in result.stdout
-    assert "Login" in result.stdout
-    assert "Goodbye!" in result.stdout
+    assert "Sceptic" in result.stdout
+    assert "Sign in" in result.stdout
+    assert "Session closed." in result.stdout
 
 
 def test_cli_login_help():
