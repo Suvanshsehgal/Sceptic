@@ -35,6 +35,14 @@ async def setup_db():
     app.dependency_overrides.pop(get_db, None)
 
 
+async def owner_headers_and_project(client, email="owner@example.com"):
+    """Log in as a mock user and create a project they own. Returns (headers, project_id)."""
+    resp = await client.get("/auth/google/callback", params={"mock_email": email})
+    headers = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+    proj = await client.post("/projects", json={"name": f"{email} project"}, headers=headers)
+    return headers, uuid.UUID(proj.json()["id"])
+
+
 @pytest.mark.anyio
 async def test_health_check():
     transport = ASGITransport(app=app)
@@ -58,15 +66,19 @@ async def test_health_db_check():
 async def test_get_audits_empty():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/audits")
+        headers, _ = await owner_headers_and_project(client)
+        response = await client.get("/audits", headers=headers)
         assert response.status_code == 200
         assert response.json() == []
 
 
 @pytest.mark.anyio
 async def test_get_audits_with_data():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        headers, project_id = await owner_headers_and_project(client)
     async with TestingSessionLocal() as db:
-        pr = models.PullRequest(repository="test/repo", pr_number=1, latest_commit_sha="abc1234")
+        pr = models.PullRequest(repository="test/repo", pr_number=1, latest_commit_sha="abc1234", project_id=project_id)
         db.add(pr)
         await db.commit()
 
@@ -89,9 +101,8 @@ async def test_get_audits_with_data():
         await db.commit()
         audit_id = str(audit.id)
 
-    transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/audits")
+        response = await client.get("/audits", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
@@ -102,8 +113,11 @@ async def test_get_audits_with_data():
 
 @pytest.mark.anyio
 async def test_get_audit_by_id():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        headers, project_id = await owner_headers_and_project(client)
     async with TestingSessionLocal() as db:
-        pr = models.PullRequest(repository="org/repo", pr_number=42, latest_commit_sha="def5678")
+        pr = models.PullRequest(repository="org/repo", pr_number=42, latest_commit_sha="def5678", project_id=project_id)
         db.add(pr)
         await db.commit()
 
@@ -118,9 +132,8 @@ async def test_get_audit_by_id():
         await db.commit()
         audit_id = str(audit.id)
 
-    transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        res = await client.get(f"/audits/{audit_id}")
+        res = await client.get(f"/audits/{audit_id}", headers=headers)
         assert res.status_code == 200
         body = res.json()
         assert body["id"] == audit_id
@@ -129,7 +142,7 @@ async def test_get_audit_by_id():
 
         # Test not found
         random_uuid = str(uuid.uuid4())
-        res_not_found = await client.get(f"/audits/{random_uuid}")
+        res_not_found = await client.get(f"/audits/{random_uuid}", headers=headers)
         assert res_not_found.status_code == 404
 
 

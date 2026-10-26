@@ -1,5 +1,9 @@
 import os
 import sys
+import json
+import asyncio
+import hmac
+import hashlib
 import logging
 import secrets
 import uuid
@@ -9,8 +13,9 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Query
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+import httpx
 from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +38,7 @@ import models
 import schemas
 from auth import (
     create_access_token,
+    verify_access_token,
     get_current_user,
     get_optional_current_user,
     get_google_auth_url,
@@ -53,6 +59,17 @@ except ImportError:
 
 logger = logging.getLogger("sceptic.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+
+def is_production() -> bool:
+    return os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+
+
+def mock_login_allowed() -> bool:
+    """Mock login impersonates any email, so it is disabled in production and can be turned off explicitly."""
+    if is_production():
+        return False
+    return os.getenv("ALLOW_MOCK_LOGIN", "true").strip().lower() != "false"
 
 
 @asynccontextmanager
@@ -160,6 +177,8 @@ async def google_callback(
 
     user_info = None
     if mock_email:
+        if not mock_login_allowed():
+            raise HTTPException(status_code=403, detail="Mock login is disabled in this environment.")
         # Hermetic testing bypass
         user_info = {
             "sub": f"mock-sub-{mock_email}",
@@ -264,21 +283,12 @@ async def register(
     if existing_user:
         if existing_user.hashed_password:
             raise HTTPException(status_code=400, detail="An account with this email already exists. Please log in.")
-        else:
-            # User previously logged in via Google OAuth. Link password to this existing account!
-            existing_user.hashed_password = hash_password(payload.password)
-            if clean_name and not existing_user.name:
-                existing_user.name = clean_name
-            await db.commit()
-            await db.refresh(existing_user)
-            access_token = create_access_token(
-                data={"sub": str(existing_user.id), "email": existing_user.email, "name": existing_user.name}
-            )
-            return {
-                "access_token": access_token,
-                "token_type": "bearer",
-                "user": existing_user
-            }
+        # The account was created through Google OAuth. Attaching a password here would let anyone who
+        # knows the email take over the account, so the owner must sign in with Google instead.
+        raise HTTPException(
+            status_code=400,
+            detail="This email belongs to a Google account. Sign in with Google instead."
+        )
 
     # Create new User
     user = models.User(
@@ -660,14 +670,18 @@ async def get_audits(
     skip: int = 0,
     limit: int = 100,
     project_id: Optional[UUID] = None,
+    current_user: models.User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieve paginated audit runs from PostgreSQL.
-    Optionally filters by project_id.
+    Retrieve paginated audit runs owned by the authenticated user.
+    Optionally filters by project_id. Audits from other users' projects are never returned.
     """
     stmt = (
         select(models.AuditRun)
+        .join(models.PullRequest, models.AuditRun.pull_request_id == models.PullRequest.id)
+        .join(models.Project, models.PullRequest.project_id == models.Project.id)
+        .filter(models.Project.user_id == current_user.id)
         .options(
             selectinload(models.AuditRun.pull_request),
             selectinload(models.AuditRun.findings)
@@ -675,9 +689,7 @@ async def get_audits(
     )
 
     if project_id:
-        stmt = stmt.join(models.PullRequest, models.AuditRun.pull_request_id == models.PullRequest.id).filter(
-            models.PullRequest.project_id == project_id
-        )
+        stmt = stmt.filter(models.PullRequest.project_id == project_id)
 
     stmt = stmt.order_by(models.AuditRun.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(stmt)
@@ -688,18 +700,22 @@ async def get_audits(
 @app.get("/audits/{audit_id}", response_model=schemas.AuditRunResponse)
 async def get_audit(
     audit_id: UUID,
+    current_user: models.User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Retrieve a single audit run by UUID with all its findings and PR metadata.
+    Returns 404 for audits that belong to another user's project.
     """
     stmt = (
         select(models.AuditRun)
+        .join(models.PullRequest, models.AuditRun.pull_request_id == models.PullRequest.id)
+        .join(models.Project, models.PullRequest.project_id == models.Project.id)
         .options(
             selectinload(models.AuditRun.pull_request),
             selectinload(models.AuditRun.findings)
         )
-        .filter(models.AuditRun.id == audit_id)
+        .filter(models.AuditRun.id == audit_id, models.Project.user_id == current_user.id)
     )
     result = await db.execute(stmt)
     audit = result.scalars().first()
@@ -708,14 +724,119 @@ async def get_audit(
     return audit
 
 
+STREAM_POLL_SECONDS = 1.0
+STREAM_MAX_SECONDS = 900
+
+
+async def _stream_user(
+    request: Request,
+    token: Optional[str],
+    db: AsyncSession
+) -> Optional[models.User]:
+    """Resolves the user from a Bearer header or, for EventSource clients, a ?token= query parameter."""
+    raw = token
+    if not raw:
+        header = request.headers.get("Authorization", "")
+        if header.lower().startswith("bearer "):
+            raw = header[7:]
+    if not raw:
+        return None
+    payload = verify_access_token(raw)
+    if not payload:
+        return None
+    try:
+        user_id = UUID(str(payload.get("sub")))
+    except (ValueError, TypeError):
+        return None
+    res = await db.execute(select(models.User).filter(models.User.id == user_id))
+    return res.scalars().first()
+
+
+@app.get("/audits/{audit_id}/stream")
+async def stream_audit_progress(
+    audit_id: UUID,
+    request: Request,
+    token: Optional[str] = Query(None, description="JWT for EventSource clients that cannot send headers"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Server-Sent Events stream of an audit's progress. Emits an 'progress' event whenever the state changes
+    (per-agent completion, status, trust score) and a final 'done' event when the audit completes or fails.
+    """
+    user = await _stream_user(request, token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication token is required")
+
+    stmt = (
+        select(models.AuditRun)
+        .join(models.PullRequest, models.AuditRun.pull_request_id == models.PullRequest.id)
+        .join(models.Project, models.PullRequest.project_id == models.Project.id)
+        .filter(models.AuditRun.id == audit_id, models.Project.user_id == user.id)
+        .execution_options(populate_existing=True)
+    )
+    first = (await db.execute(stmt)).scalars().first()
+    if not first:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
+    async def event_stream():
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + STREAM_MAX_SECONDS
+        last_payload = None
+        while True:
+            audit = (await db.execute(stmt)).scalars().first()
+            if audit is None:
+                yield "event: error\ndata: {\"detail\": \"Audit not found\"}\n\n"
+                return
+            snapshot = {
+                "status": audit.status,
+                "trust_score": audit.trust_score,
+                "recommendation": audit.recommendation,
+                "progress": audit.progress or {"stage": audit.status, "agents": {}},
+            }
+            payload = json.dumps(snapshot, default=str)
+            if payload != last_payload:
+                yield f"event: progress\ndata: {payload}\n\n"
+                last_payload = payload
+            if audit.status in ("COMPLETED", "FAILED"):
+                yield f"event: done\ndata: {payload}\n\n"
+                return
+            if loop.time() > deadline:
+                yield "event: timeout\ndata: {\"detail\": \"Stream closed after the maximum wait; poll GET /audits/{id}\"}\n\n"
+                return
+            await asyncio.sleep(STREAM_POLL_SECONDS)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.post("/webhook")
 async def receive_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """
     Webhook Receiver for PR events with idempotency enforcement.
+
+    When GITHUB_WEBHOOK_SECRET is set, the X-Hub-Signature-256 header must match an HMAC-SHA256 of the raw body.
+    In production the secret is mandatory. Only a signed request may link the PR to a project via project_id.
     """
+    raw_body = await request.body()
+    webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+    signature_verified = False
+    if webhook_secret:
+        provided = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(webhook_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(provided, expected):
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        signature_verified = True
+    elif is_production():
+        raise HTTPException(status_code=503, detail="GITHUB_WEBHOOK_SECRET must be configured in production")
+
     try:
-        payload = await request.json()
+        payload = json.loads(raw_body)
     except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
     # Extract repository information
@@ -745,7 +866,7 @@ async def receive_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     # Optional project linkage
     project_id_str = payload.get("project_id")
     project_id = None
-    if project_id_str:
+    if project_id_str and signature_verified:
         try:
             project_id = UUID(str(project_id_str))
         except ValueError:
@@ -1005,6 +1126,37 @@ async def update_deployment_status(
     await db.commit()
     await db.refresh(deployment)
     return deployment
+
+
+@app.get("/deployments/{deployment_id}/live")
+async def deployment_live_metrics(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Current health, error rate, and p95 latency read live from the target service and Prometheus.
+    Nothing is stored. Use POST /deployments/{id}/watchdog/check to record a snapshot.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+    watchdog = PipelineWatchdog()
+    async with httpx.AsyncClient() as client:
+        health_status, health_finding = await watchdog.check_health(client)
+        total, errors, error_rate, latency_avg, latency_p95, metric_findings = await watchdog.evaluate_metrics(client)
+    findings = ([health_finding] if health_finding else []) + metric_findings
+    return {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "health_status": health_status,
+        "request_count": total,
+        "error_count": errors,
+        "error_rate": error_rate,
+        "latency_avg": latency_avg,
+        "latency_p95": latency_p95,
+        "findings": [
+            {"finding_type": f.finding_type, "severity": f.severity, "description": f.description}
+            for f in findings
+        ],
+    }
 
 
 @app.get(
