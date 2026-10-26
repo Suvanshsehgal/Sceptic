@@ -2,6 +2,7 @@ import os
 import ast
 import sys
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 
@@ -13,6 +14,7 @@ for p in [root_dir, worker_dir]:
         sys.path.insert(0, p)
 
 from orchestrator import AuditOrchestrator
+from crewai_extra_agents import run_leak_hunter, run_purana_saman, run_jhooti_docstring
 from blind_tester import SpecificationMetadata
 from synthesizer import TrustScoreCalculator, ReportSynthesizer
 
@@ -21,6 +23,10 @@ from languages.universal_parser import UniversalParser
 from languages.base import LanguageAdapterRegistry
 
 logger = logging.getLogger("sceptic.service")
+
+# Blind-Tester specs of one file that run at the same time (each one is an LLM call plus a sandbox run).
+# Defaults to 1: on a Docker Desktop host, concurrent sandbox containers slowed each spec about 5x.
+SPEC_WORKERS = max(1, int(os.getenv("SCEPTIC_SPEC_WORKERS", "1")))
 
 class AuditService:
     """
@@ -97,7 +103,21 @@ class AuditService:
             "Fact-Checker": "OK",
             "Blind-Tester": "OK",
             "Security-Guard": "OK",
+            "Leak-Hunter": "OK",
+            "Purana-Saman": "OK",
+            "Jhooti-Docstring": "OK",
             "Synthesizer": "OK"
+        }
+
+        # 4a. Target-level agents do not read the source files, so they run in the background while files are audited.
+        #     Purana-Saman's dependency resolution is the slowest step in an audit.
+        target_pool = ThreadPoolExecutor(max_workers=2)
+        target_futures = {
+            agent_name: target_pool.submit(runner, str(path_obj))
+            for agent_name, runner in (
+                ("Leak-Hunter", run_leak_hunter),
+                ("Purana-Saman", run_purana_saman),
+            )
         }
 
         # 4. Audit each discovered file
@@ -123,40 +143,82 @@ class AuditService:
                 })
                 continue
 
-            # Extract functions or module-level specs
+            # Jhooti-Docstring: one LLM call per file (skipped without GROQ_API_KEY)
+            try:
+                docstring_findings = run_jhooti_docstring(source_code, rel_path)
+                all_findings.extend(docstring_findings)
+                if any(f.get("status") == "ERROR" for f in docstring_findings):
+                    agent_statuses["Jhooti-Docstring"] = "PARTIAL_FAILURE"
+            except Exception as e:
+                logger.warning(f"Jhooti-Docstring failed on {rel_path}: {e}")
+                agent_statuses["Jhooti-Docstring"] = "PARTIAL_FAILURE"
+
+            # Fact-Checker and Security-Guard read the whole file, so they run once here, not once per function.
+            try:
+                # The compiler needs the real absolute path to find sibling imports. Reports keep the relative path.
+                absolute_path = str(src_file.resolve())
+                file_checks = self.orchestrator.run_file_checks(source_code, absolute_path, file_lang)
+                for findings in file_checks.values():
+                    for finding in findings:
+                        if finding.get("file_path") == absolute_path:
+                            finding["file_path"] = rel_path
+                    all_findings.extend(findings)
+                    for finding in findings:
+                        if finding.get("status") == "ERROR" and finding.get("agent_name") in agent_statuses:
+                            agent_statuses[finding["agent_name"]] = "PARTIAL_FAILURE"
+            except Exception as e:
+                logger.exception(f"File checks failed on {rel_path}: {e}")
+                agent_statuses["Synthesizer"] = "PARTIAL_FAILURE"
+                all_findings.append({
+                    "agent_name": "Synthesizer",
+                    "severity": "HIGH",
+                    "status": "ERROR",
+                    "title": "Audit Pipeline Failure",
+                    "description": f"Audit execution failed on {rel_path}: {str(e)}",
+                    "file_path": rel_path
+                })
+
+            # Blind-Tester works per function. Each spec is an LLM call plus a sandbox run, so they overlap.
             func_specs = self._extract_specifications(source_code, src_file.stem, language=file_lang, testing_framework=test_fw)
 
-            for spec in func_specs:
+            def _run_spec(spec):
                 if progress_callback:
                     progress_callback("AGENT_START", f"Auditing '{spec.function_name}' in {rel_path}...")
-
                 try:
-                    report = self.orchestrator.run_pipeline(
-                        source_code=source_code,
-                        specification_metadata=spec,
-                        file_path=rel_path
-                    )
-                    file_findings = report.get("all_findings", [])
-                    all_findings.extend(file_findings)
-
-                    # Update agent statuses if errors occurred
-                    for finding in file_findings:
-                        if finding.get("status") == "ERROR":
-                            agent_name = finding.get("agent_name")
-                            if agent_name in agent_statuses:
-                                agent_statuses[agent_name] = "PARTIAL_FAILURE"
-
+                    return self.orchestrator.run_spec_checks(source_code, spec, rel_path), None
                 except Exception as e:
-                    logger.exception(f"Orchestration failure on {rel_path}: {e}")
-                    agent_statuses["Synthesizer"] = "PARTIAL_FAILURE"
-                    all_findings.append({
-                        "agent_name": "Synthesizer",
-                        "severity": "HIGH",
-                        "status": "ERROR",
-                        "title": "Audit Pipeline Failure",
-                        "description": f"Audit execution failed on {rel_path}: {str(e)}",
-                        "file_path": rel_path
-                    })
+                    return [], e
+
+            with ThreadPoolExecutor(max_workers=max(1, min(SPEC_WORKERS, len(func_specs) or 1))) as pool:
+                for spec_findings, error in pool.map(_run_spec, func_specs):
+                    if error is not None:
+                        logger.exception(f"Orchestration failure on {rel_path}: {error}")
+                        agent_statuses["Synthesizer"] = "PARTIAL_FAILURE"
+                        all_findings.append({
+                            "agent_name": "Synthesizer",
+                            "severity": "HIGH",
+                            "status": "ERROR",
+                            "title": "Audit Pipeline Failure",
+                            "description": f"Audit execution failed on {rel_path}: {str(error)}",
+                            "file_path": rel_path
+                        })
+                        continue
+                    all_findings.extend(spec_findings)
+                    for finding in spec_findings:
+                        if finding.get("status") == "ERROR" and finding.get("agent_name") in agent_statuses:
+                            agent_statuses[finding["agent_name"]] = "PARTIAL_FAILURE"
+
+        # 4b. Collect the target-level agents: Leak-Hunter (secrets) and Purana-Saman (dependencies)
+        for agent_name, future in target_futures.items():
+            try:
+                level_findings = future.result()
+                all_findings.extend(level_findings)
+                if any(f.get("status") == "ERROR" for f in level_findings):
+                    agent_statuses[agent_name] = "PARTIAL_FAILURE"
+            except Exception as e:
+                logger.warning(f"{agent_name} failed on {target_path}: {e}")
+                agent_statuses[agent_name] = "PARTIAL_FAILURE"
+        target_pool.shutdown(wait=False)
 
         # 5. Final Synthesis across all inspected files
         if progress_callback:
@@ -169,9 +231,8 @@ class AuditService:
 
         # Aggregate contributions
         agent_contributions = {
-            "Fact-Checker": len([f for f in all_findings if f.get("agent_name") == "Fact-Checker"]),
-            "Blind-Tester": len([f for f in all_findings if f.get("agent_name") == "Blind-Tester"]),
-            "Security-Guard": len([f for f in all_findings if f.get("agent_name") == "Security-Guard"])
+            name: len([f for f in all_findings if f.get("agent_name") == name])
+            for name in ("Fact-Checker", "Blind-Tester", "Security-Guard", "Leak-Hunter", "Purana-Saman", "Jhooti-Docstring")
         }
 
         summary_text = (
@@ -208,6 +269,9 @@ class AuditService:
         try:
             parsed = UniversalParser.parse(source_code, language, file_path=f"{module_name}.{language}")
             for fn in parsed.functions:
+                # Python class methods and properties need an instance, so a module-level spec test cannot call them.
+                if language == "python" and getattr(fn, "is_method", False):
+                    continue
                 if not fn.name.startswith("_") and fn.name not in ("anonymous", ""):
                     doc = fn.docstring or f"Function '{fn.name}'."
                     spec_text = f"Function '{fn.name}' specification in {language}."

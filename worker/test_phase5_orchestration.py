@@ -293,9 +293,23 @@ async def test_complete_end_to_end_flow():
     task_res = celery_app.execute_audit_pipeline(audit_run_id, payload)
     assert task_res["status"] == "COMPLETED"
 
-    # 3. Verify Database Persistence via API
+    # 3. Verify Database Persistence via API (audits are only visible to their owner)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp_audits = await ac.get("/audits")
+        login = await ac.get("/auth/google/callback", params={"mock_email": "phase5@example.com"})
+        owner_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        proj = await ac.post("/projects", json={"name": "Phase5 Project"}, headers=owner_headers)
+        owner_project_id = proj.json()["id"]
+    # Unsigned webhooks cannot choose a project, so attach the PR to the owner's project for this check.
+    from sqlalchemy import update
+    async with AsyncTestingSessionLocal() as db:
+        await db.execute(
+            update(models.PullRequest)
+            .where(models.PullRequest.repository == "openai/whisper")
+            .values(project_id=owner_project_id)
+        )
+        await db.commit()
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp_audits = await ac.get("/audits", headers=owner_headers)
         assert resp_audits.status_code == 200
         audits = resp_audits.json()
         matching = [a for a in audits if str(a["id"]) == str(audit_run_id)]

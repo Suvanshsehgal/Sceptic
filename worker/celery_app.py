@@ -16,6 +16,7 @@ from database import SessionLocal
 import models
 from orchestrator import AuditOrchestrator
 from blind_tester import SpecificationMetadata
+from crewai_reporter import post_pr_summary
 
 logger = logging.getLogger("sceptic.celery")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -36,6 +37,28 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True
 )
+
+def _post_pr_summary(payload: dict, report: dict) -> None:
+    """Best-effort: publishes the verdict on the pull request. A failure here never fails the audit."""
+    repo = payload.get("repository")
+    if isinstance(repo, dict):
+        repo = repo.get("full_name")
+    pr_number = payload.get("pr_number")
+    pr_data = payload.get("pull_request")
+    if pr_number is None and isinstance(pr_data, dict):
+        pr_number = pr_data.get("number")
+    if not repo or pr_number is None:
+        return
+    body = (
+        f"**Sceptic verdict: {report.get('recommendation')}** "
+        f"(Trust Score {report.get('trust_score')}/100)\n\n{report.get('summary', '')}"
+    )
+    try:
+        result = post_pr_summary(str(repo), int(pr_number), body)
+        logger.info(f"PR summary for {repo}#{pr_number}: {result}")
+    except Exception as e:
+        logger.warning(f"Could not post PR summary for {repo}#{pr_number}: {e}")
+
 
 @celery_app.task(name="execute_audit_pipeline", bind=True)
 def execute_audit_pipeline(self, audit_run_id, payload: dict):
@@ -74,11 +97,27 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
             specification=specification
         )
 
+        def record_progress(agent_name: str, finding_count: int) -> None:
+            # Assign a new dict so SQLAlchemy detects the change on the JSON column.
+            current = dict(audit_run.progress or {"stage": "RUNNING", "agents": {}})
+            agents = dict(current.get("agents", {}))
+            agents[agent_name] = {"status": "done", "findings": finding_count}
+            audit_run.progress = {
+                "stage": "RUNNING",
+                "agents": agents,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            db.commit()
+
+        audit_run.progress = {"stage": "RUNNING", "agents": {}, "updated_at": datetime.now(timezone.utc).isoformat()}
+        db.commit()
+
         orchestrator = AuditOrchestrator()
         report = orchestrator.run_pipeline(
             source_code=source_code,
             specification_metadata=spec,
-            file_path=file_path
+            file_path=file_path,
+            progress_callback=record_progress,
         )
 
         # Persist AgentFindings
@@ -111,6 +150,7 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
         db.commit()
 
         logger.info(f"AuditRun {audit_run_id} completed successfully. Score: {audit_run.trust_score}")
+        _post_pr_summary(payload, report)
         return {
             "status": "COMPLETED",
             "audit_run_id": audit_run_id,

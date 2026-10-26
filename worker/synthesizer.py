@@ -28,10 +28,14 @@ class TrustScoreCalculator:
         "UNRESOLVED": 5,
         "ERROR": 5
     }
+    # "Could not check" findings (unresolved calls, missing tools, unreachable databases, import errors in generated
+    # tests) are reported, but they share one capped penalty so they cannot outweigh real defects.
+    UNCERTAINTY_CAP = 15
 
     @classmethod
     def calculate(cls, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
         score = 100
+        uncertainty_penalty = 0
         severity_breakdown = {
             "CRITICAL": 0,
             "HIGH": 0,
@@ -45,18 +49,22 @@ class TrustScoreCalculator:
         for f in findings:
             sev = (f.get("severity") or "INFO").upper()
             status = (f.get("status") or "").upper()
-            
-            if status == "UNRESOLVED":
+
+            if status in ("UNRESOLVED", "ERROR"):
                 severity_breakdown["UNRESOLVED"] += 1
-                penalty = cls.WEIGHTS["UNRESOLVED"]
-                score -= penalty
-                deductions_detail.append(f"UNRESOLVED finding '{f.get('title', '')}': -{penalty} pts")
+                uncertainty_penalty += cls.WEIGHTS["UNRESOLVED"]
+                deductions_detail.append(f"Not fully checked: '{f.get('title', '')}'")
             elif sev in severity_breakdown:
                 severity_breakdown[sev] += 1
                 penalty = cls.WEIGHTS.get(sev, 0)
                 if penalty > 0:
                     score -= penalty
                     deductions_detail.append(f"{sev} finding '{f.get('title', '')}': -{penalty} pts")
+
+        applied_uncertainty = min(uncertainty_penalty, cls.UNCERTAINTY_CAP)
+        if applied_uncertainty:
+            score -= applied_uncertainty
+            deductions_detail.append(f"Uncertainty penalty (capped): -{applied_uncertainty} pts")
 
         score = max(0, min(100, score))
 
