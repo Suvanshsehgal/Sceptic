@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional
 # Ensure paths
 sys.path.insert(0, os.path.dirname(__file__))
 
+import compiler_verifier
 from languages.detector import LanguageDetector
 from languages.base import LanguageAdapterRegistry
 from languages.models import (
@@ -74,7 +75,13 @@ class FactCheckerAgent:
                 ).to_dict()
             ]
 
-        # 3. Parse code using adapter
+        # 3. Compiler verification when the language has a compiler installed (tsc for JS/TS, javac for Java).
+        # Compiler results are authoritative, so the list-based checks run only when no compiler is available.
+        compiler_findings = compiler_verifier.verify(source_code, file_path, detected_lang)
+        if compiler_findings is not None:
+            return compiler_findings
+
+        # 4. Parse code using adapter
         parsed_file = adapter.parse_code(source_code, file_path=file_path)
 
         # 4. Perform deterministic verification

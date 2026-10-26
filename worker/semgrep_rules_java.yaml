@@ -1,0 +1,50 @@
+rules:
+  - id: java-command-injection
+    patterns:
+      - pattern-either:
+          - pattern: Runtime.getRuntime().exec(...)
+          - pattern: new ProcessBuilder(...)
+    message: "Process execution detected. Untrusted input in the command allows command injection. Pass arguments as a list and validate them."
+    languages: [java]
+    severity: ERROR
+
+  - id: java-unsafe-deserialization
+    patterns:
+      - pattern-either:
+          - pattern: new ObjectInputStream(...).readObject()
+          - pattern: $OIS.readObject()
+    message: "Java native deserialization of untrusted data can lead to remote code execution. Use a safe format such as JSON."
+    languages: [java]
+    severity: ERROR
+
+  - id: java-sql-string-concat
+    patterns:
+      - pattern-either:
+          - pattern: $S.executeQuery($Q + $X)
+          - pattern: $S.executeUpdate($Q + $X)
+          - pattern: $S.execute($Q + $X)
+    message: "SQL statement built by string concatenation. Use PreparedStatement with parameters."
+    languages: [java]
+    severity: ERROR
+
+  - id: java-weak-hash
+    patterns:
+      - pattern-either:
+          - pattern: MessageDigest.getInstance("MD5")
+          - pattern: MessageDigest.getInstance("SHA-1")
+    message: "Weak hash algorithm (MD5 or SHA-1). Use SHA-256 or stronger."
+    languages: [java]
+    severity: WARNING
+
+  - id: java-hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: String $X = "..."
+          - pattern: $T $X = "..."
+          - pattern: $X = "..."
+      - metavariable-regex:
+          metavariable: $X
+          regex: (?i)(password|secret|token|apikey|api_key)
+    message: "Possible hardcoded credential or secret."
+    languages: [java]
+    severity: WARNING

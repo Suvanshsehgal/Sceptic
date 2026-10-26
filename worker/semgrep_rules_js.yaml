@@ -1,0 +1,58 @@
+rules:
+  - id: js-command-injection
+    patterns:
+      - pattern-either:
+          - pattern: child_process.exec(...)
+          - pattern: child_process.execSync(...)
+          - pattern: require("child_process").exec(...)
+          - pattern: require("child_process").execSync(...)
+    message: "Shell command execution detected. Untrusted input in the command string allows command injection. Use execFile with an argument array."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: js-dangerous-eval
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: new Function(...)
+    message: "Dynamic code evaluation (eval or Function constructor) detected."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: js-innerhtml-xss
+    pattern: $EL.innerHTML = $X
+    message: "Assigning to innerHTML can introduce cross-site scripting. Use textContent or a sanitizer."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: js-sql-string-concat
+    patterns:
+      - pattern-either:
+          - pattern: $DB.query($Q + $X, ...)
+          - pattern: $DB.query(`...${$X}...`, ...)
+    message: "SQL query built by string concatenation or interpolation. Use parameterized queries."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: js-weak-hash
+    patterns:
+      - pattern-either:
+          - pattern: crypto.createHash("md5")
+          - pattern: crypto.createHash("sha1")
+    message: "Weak hash algorithm (MD5 or SHA-1). Use SHA-256 or stronger."
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  - id: js-hardcoded-secret
+    patterns:
+      - pattern-either:
+          - pattern: const $X = "..."
+          - pattern: let $X = "..."
+          - pattern: var $X = "..."
+          - pattern: $X = "..."
+      - metavariable-regex:
+          metavariable: $X
+          regex: (?i)(password|secret|token|api_?key)
+    message: "Possible hardcoded credential or secret."
+    languages: [javascript, typescript]
+    severity: WARNING
