@@ -1,8 +1,9 @@
+import re
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional, Any, Dict
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 
 # ==========================================
@@ -183,16 +184,33 @@ class AuditRunCreate(AuditRunBase):
     pull_request_id: UUID
 
 
+_TRACE_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
 class AuditRunResponse(AuditRunBase):
     id: UUID
     pull_request_id: UUID
     created_at: datetime
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    trace_id: Optional[str] = None
+    progress: Optional[Dict[str, Any]] = None
     pull_request: Optional[PullRequestSummary] = None
     findings: List[AgentFindingResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def trace_url(self) -> Optional[str]:
+        """Link to this audit's trace in Langfuse. None when tracing is not configured or the run was not traced."""
+        if not self.trace_id:
+            return None
+        try:
+            import tracing
+        except ImportError:
+            return None
+        return tracing.trace_url(self.trace_id)
 
 
 class PullRequestResponse(PullRequestBase):
@@ -210,7 +228,14 @@ class CLIAuditSubmission(BaseModel):
     summary: Optional[str] = None
     recommendation: Optional[str] = "UNKNOWN"
     commit_sha: Optional[str] = "cli-local"
+    trace_id: Optional[str] = None
     findings: List[Dict[str, Any]] = []
+
+    @field_validator("trace_id", mode="before")
+    @classmethod
+    def _valid_trace_id(cls, value):
+        """A malformed trace id is dropped instead of rejecting the whole audit upload."""
+        return value if isinstance(value, str) and _TRACE_ID_RE.match(value) else None
 
 
 # ==========================================
