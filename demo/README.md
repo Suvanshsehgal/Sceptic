@@ -40,3 +40,15 @@ Fault settings stay until you change them. Check the Status card before you test
 - The panel only allows the five container actions listed above.
 - `/admin/fault` on the demo site has no login. Keep it on your local machine.
 - Environment variables, if you need to change them: `DEMO_SITE_PORT` (default 8090), `DEMO_SITE_URL`, and `DEMO_CONTAINER_NAME`.
+
+## Post-deployment demo (ADK + A2A + report)
+
+1. Set the backend to watch the demo site, then restart the backend:
+   `TARGET_SERVICE_URL=http://demo-site:8090` (in the backend environment of `docker-compose.yml` or your `.env`).
+2. Get a bearer token (log in through `POST /auth/login`) and find the UUID of a deployment you own.
+3. Run:
+   ```powershell
+   $env:SCEPTIC_TOKEN = "<token>"
+   .\venv\Scripts\python.exe scripts\demo_post_deploy.py --deployment-id <uuid>
+   ```
+The script injects 100% errors, waits for Prometheus, runs the Watchdog over A2A (which calls the Rollback agent on FAIL), saves a Markdown report to `reports/`, and resets the fault. Rollback refuses to act when no safe previous deployment exists, and the output says so.
