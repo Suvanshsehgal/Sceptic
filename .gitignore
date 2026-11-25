@@ -71,3 +71,10 @@ htmlcov/
 .semgrep/
 .semgrep_logs/
 
+
+# Generated post-deployment incident reports
+reports/
+
+# Documentation
+docs/
+
