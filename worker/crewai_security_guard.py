@@ -69,5 +69,7 @@ def analyze_with_security_guard(source_code: str, file_path: str = "target.py") 
         expected_output="A structured report of the security findings.",
         agent=security_guard_agent,
     )
-    crew = Crew(agents=[security_guard_agent], tasks=[task], process=Process.sequential, verbose=False)
+    import guardrails
+    crew = Crew(agents=[security_guard_agent], tasks=[task], process=Process.sequential, verbose=False,
+                step_callback=guardrails.crewai_step_callback("Security-Guard"))
     return str(crew.kickoff())

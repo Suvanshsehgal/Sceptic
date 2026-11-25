@@ -80,5 +80,7 @@ def analyze_with_crewai(code: str) -> str:
         expected_output="A JSON-like structured report of the API findings exactly matching the tool's output.",
         agent=fact_checker_agent,
     )
-    crew = Crew(agents=[fact_checker_agent], tasks=[task], process=Process.sequential, verbose=False)
+    import guardrails
+    crew = Crew(agents=[fact_checker_agent], tasks=[task], process=Process.sequential, verbose=False,
+                step_callback=guardrails.crewai_step_callback("Fact-Checker"))
     return str(crew.kickoff())
