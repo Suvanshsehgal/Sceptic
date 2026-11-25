@@ -26,7 +26,13 @@ if backend_dir not in sys.path:
 import models
 from database import get_db
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "sceptic-super-secret-dev-jwt-key-32-chars-long!")
+_DEV_JWT_SECRET = "sceptic-super-secret-dev-jwt-key-32-chars-long!"
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", _DEV_JWT_SECRET)
+if os.getenv("ENVIRONMENT", "development").strip().lower() == "production" and (
+    JWT_SECRET_KEY == _DEV_JWT_SECRET or len(JWT_SECRET_KEY) < 32
+):
+    # Anyone who reads the repository knows the development secret and could forge tokens with it.
+    raise RuntimeError("JWT_SECRET_KEY must be set to a random value of at least 32 characters in production.")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
