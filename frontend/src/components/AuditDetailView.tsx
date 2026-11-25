@@ -1,27 +1,71 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { auditStreamUrl, fetchAuditById } from '../api';
-import { AuditRun, AgentFinding, AuditProgress } from '../types';
-import { 
-  ArrowLeft, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Clock, 
-  GitPullRequest, 
-  FileCode2, 
-  AlertTriangle,
-  Info,
-  CheckCircle2,
-  Terminal,
-  Cpu,
-  Layers,
+import { AuditRun, AuditProgress } from '../types';
+import {
+  ArrowLeft,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2,
+  ExternalLink,
+  GitPullRequest,
 } from 'lucide-react';
+import {
+  Badge,
+  SEVERITY_ORDER,
+  SectionTitle,
+  SeverityBadge,
+  SeverityBar,
+  StatusBadge,
+  SymbolStatus,
+  VerdictCard,
+  type SymbolState,
+} from './ui';
 
 interface AuditDetailViewProps {
   auditId: number | string;
   onBack: () => void;
+}
+
+/* The six verification agents, in the order the CLI prints them. */
+const VERIFICATION_AGENTS = [
+  'Fact-Checker',
+  'Blind-Tester',
+  'Security-Guard',
+  'Leak-Hunter',
+  'Purana-Saman',
+  'Jhooti-Docstring',
+] as const;
+
+const SEVERITY_RANK: Record<string, number> = Object.fromEntries(SEVERITY_ORDER.map((key, index) => [key, index]));
+
+const SEVERITY_TEXT: Record<string, string> = {
+  CRITICAL: 'text-critical',
+  HIGH: 'text-danger',
+  MEDIUM: 'text-warning',
+  LOW: 'text-info',
+  INFO: 'text-ink-muted',
+};
+
+function formatDuration(startIso?: string | null, endIso?: string | null): string | null {
+  if (!startIso || !endIso) return null;
+  const seconds = (new Date(endIso).getTime() - new Date(startIso).getTime()) / 1000;
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  if (seconds < 60) return `${seconds.toFixed(1)} s`;
+  return `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`;
+}
+
+/* Per-agent state. The API stores the statuses the worker reported at completion. For older audits that do not have
+   them, a status is only inferred from findings, and the table says so. */
+function agentStateFor(name: string, reported: Record<string, string> | null, ownFindings: { status?: string }[]): { state: SymbolState; word: string } {
+  if (reported) {
+    const value = (reported[name] || '').toUpperCase();
+    if (value === 'PARTIAL_FAILURE') return { state: 'warn', word: 'PARTIAL' };
+    if (value === 'OK') return { state: 'ok', word: 'OK' };
+    return { state: 'info', word: 'NOT RUN' };
+  }
+  const errored = ownFindings.some((f) => String(f.status || '').toUpperCase() === 'ERROR');
+  return errored ? { state: 'warn', word: 'PARTIAL' } : { state: 'info', word: 'NOT RECORDED' };
 }
 
 export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBack }) => {
@@ -77,6 +121,26 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
     }));
   };
 
+  const findings = audit?.findings ?? [];
+
+  // Derived values. They are computed before any early return so the hook order stays fixed.
+  const severityCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const f of findings) {
+      const key = (f.severity || 'INFO').toUpperCase();
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    return counts;
+  }, [findings]);
+
+  const sortedFindings = useMemo(
+    () => [...findings].sort((a, b) => {
+      const rank = (f: { severity?: string }) => SEVERITY_RANK[(f.severity || 'INFO').toUpperCase()] ?? 99;
+      return rank(a) - rank(b) || String(a.title).localeCompare(String(b.title));
+    }),
+    [findings],
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -106,241 +170,226 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
 
   const pr = audit.pull_request;
   const score = audit.trust_score;
-  const findings = audit.findings || [];
+  const reportedStatuses = audit.progress?.statuses && Object.keys(audit.progress.statuses).length > 0
+    ? audit.progress.statuses
+    : null;
+  const duration = formatDuration(audit.started_at, audit.completed_at);
 
   const dynamicAgents = Array.from(new Set(findings.map((f) => f.agent_name))).filter(Boolean);
-  const agentNames = ['ALL', ...Array.from(new Set(['Fact-Checker', 'Blind-Tester', 'Security-Guard', ...dynamicAgents]))];
+  const agentNames = ['ALL', ...Array.from(new Set<string>([...VERIFICATION_AGENTS, ...dynamicAgents]))];
   const filteredFindings = selectedAgent === 'ALL'
-    ? findings
-    : findings.filter((f) => f.agent_name.toLowerCase().includes(selectedAgent.toLowerCase()) || f.agent_name === selectedAgent);
-
-  const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length;
-  const highCount = findings.filter((f) => f.severity === 'HIGH').length;
-  const mediumCount = findings.filter((f) => f.severity === 'MEDIUM').length;
-  const lowCount = findings.filter((f) => f.severity === 'LOW').length;
+    ? sortedFindings
+    : sortedFindings.filter((f) => f.agent_name === selectedAgent);
 
   return (
-    <div className="space-y-6">
-      {/* Back button */}
+    <div className="space-y-8">
       <div>
         <button
           onClick={onBack}
           className="inline-flex items-center gap-2 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to Audits List</span>
+          <span>Back to Audits</span>
         </button>
       </div>
 
-      {/* Main Audit Header Card */}
-      <div className="p-6 rounded-xl bg-surface border border-line space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-ink font-mono">Audit #{audit.id}</h2>
-              <span className={`px-2.5 py-0.5 rounded text-xs font-semibold uppercase ${
-                audit.status === 'COMPLETED' ? 'bg-accent/10 text-accent border border-accent/30' :
-                audit.status === 'RUNNING' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse' :
-                audit.status === 'FAILED' ? 'bg-danger/10 text-danger border border-red-500/20' :
-                'bg-surface-raised text-ink-muted'
-              }`}>
-                {audit.status}
-              </span>
-            </div>
-            {pr ? (
-              <div className="flex items-center gap-2 text-xs text-ink-muted">
-                <GitPullRequest className="h-3.5 w-3.5 text-ink-muted" />
-                <span className="font-semibold text-ink">{pr.repository || pr.repository_full_name || 'Project Audit'}</span>
-                <span>·</span>
-                <span>PR #{pr.pr_number || 1}</span>
-                <span>·</span>
-                <span className="font-mono text-ink-muted">commit {String(pr.latest_commit_sha || pr.commit_sha || audit.commit_sha || 'cli-local').substring(0, 7)}</span>
-                {pr.branch_name && <span>· branch {pr.branch_name}</span>}
-              </div>
-            ) : (
-              <p className="text-xs text-ink-muted">CLI / In-Process Synchronous Audit</p>
-            )}
+      {/* Header: identity, status and timing, in the CLI's brand-bar style */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="font-mono text-[22px] font-semibold tracking-tight text-ink">Audit #{audit.id}</h2>
+            <StatusBadge status={audit.status} />
           </div>
-
-          {/* Trust Score & Recommendation Badge */}
-          <div className="flex items-center gap-4 bg-canvas p-3.5 rounded-xl border border-line">
-            <div>
-              <span className="block text-[10px] text-ink-muted uppercase font-semibold">Trust Score</span>
-              <span className={`text-2xl font-bold font-mono ${
-                typeof score !== 'number' ? 'text-ink-muted' :
-                score >= 85 ? 'text-accent' :
-                score >= 65 ? 'text-warning' : 'text-danger'
-              }`}>
-                {typeof score === 'number' ? `${score}/100` : 'Pending'}
-              </span>
+          {pr ? (
+            <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+              <GitPullRequest className="h-3.5 w-3.5" aria-hidden />
+              <span className="font-medium text-ink">{pr.repository || pr.repository_full_name || 'Project audit'}</span>
+              <span aria-hidden>·</span>
+              <span>PR #{pr.pr_number || 1}</span>
+              <span aria-hidden>·</span>
+              <span className="font-mono">commit {String(pr.latest_commit_sha || pr.commit_sha || audit.commit_sha || 'cli-local').substring(0, 7)}</span>
+              {pr.branch_name && (<><span aria-hidden>·</span><span>branch {pr.branch_name}</span></>)}
             </div>
-            <div className="h-8 w-px bg-surface-raised" />
-            <div>
-              <span className="block text-[10px] text-ink-muted uppercase font-semibold">Verdict</span>
-              <span className={`text-sm font-bold uppercase font-mono ${
-                audit.recommendation === 'APPROVE' ? 'text-accent' :
-                audit.recommendation === 'REQUEST_CHANGES' ? 'text-warning' :
-                audit.recommendation === 'BLOCK' ? 'text-danger' : 'text-ink-muted'
-              }`}>
-                {audit.recommendation || 'N/A'}
-              </span>
-            </div>
-          </div>
+          ) : (
+            <p className="text-[13px] text-ink-muted">CLI audit · run in-process</p>
+          )}
         </div>
+        <dl className="grid grid-cols-2 gap-x-8 gap-y-2 text-[13px] md:text-right">
+          <div>
+            <dt className="text-ink-subtle">Started</dt>
+            <dd className="tabular font-mono text-ink">{new Date(audit.started_at ?? audit.created_at).toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt className="text-ink-subtle">Duration</dt>
+            <dd className="tabular font-mono text-ink">
+              {duration ?? (audit.completed_at ? '—' : 'In progress')}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
-        {/* Timestamps & Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div>
-            <span className="text-ink-muted block mb-0.5">Started At:</span>
-            <span className="text-ink font-mono">{new Date(audit.started_at).toLocaleString()}</span>
-          </div>
-          <div>
-            <span className="text-ink-muted block mb-0.5">Completed At:</span>
-            <span className="text-ink font-mono">
-              {audit.completed_at ? new Date(audit.completed_at).toLocaleString() : 'In Progress'}
-            </span>
-          </div>
-          <div>
-            <span className="text-ink-muted block mb-0.5">Finding Distribution:</span>
-            <div className="flex items-center gap-2 font-mono">
-              <span className="text-danger font-bold">{criticalCount} Crit</span>
-              <span className="text-ink-subtle">·</span>
-              <span className="text-orange-400 font-bold">{highCount} High</span>
-              <span className="text-ink-subtle">·</span>
-              <span className="text-warning">{mediumCount} Med</span>
-              <span className="text-ink-subtle">·</span>
-              <span className="text-blue-400">{lowCount} Low</span>
-            </div>
-          </div>
-        </div>
+      {/* Verdict: the CLI's verdict panel */}
+      <VerdictCard
+        title={`Verdict · ${audit.commit_sha && audit.commit_sha !== 'cli-local' ? 'pull request' : 'audit'} result`}
+        score={score}
+        recommendation={audit.recommendation}
+        summary={audit.summary}
+        footer={audit.trace_url ? (
+          <a
+            href={audit.trace_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-mono text-xs text-accent hover:underline"
+          >
+            Agent trace in Langfuse
+            <ExternalLink className="h-3 w-3" aria-hidden />
+          </a>
+        ) : null}
+      />
 
-        {audit.summary && (
-          <div className="p-4 rounded-lg bg-canvas border border-line text-xs text-ink leading-relaxed font-sans">
-            <span className="font-semibold text-ink block mb-1">Synthesizer Assessment:</span>
-            {audit.summary}
-          </div>
-        )}
+      {/* Severity breakdown and agent status, side by side on wide screens */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        <section className="space-y-4 rounded-lg border border-line bg-surface p-5 lg:col-span-2">
+          <SectionTitle aside={`${findings.length} total`}>Severity</SectionTitle>
+          <SeverityBar counts={severityCounts} />
+        </section>
+
+        <section className="space-y-4 rounded-lg border border-line bg-surface p-5 lg:col-span-3">
+          <SectionTitle aside={reportedStatuses ? 'as reported' : 'inferred from findings'}>Agents</SectionTitle>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-ink-subtle">
+                <th className="py-2 font-medium">Agent</th>
+                <th className="py-2 font-medium">Status</th>
+                <th className="py-2 text-right font-medium">Findings</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {VERIFICATION_AGENTS.map((name) => {
+                const own = findings.filter((f) => f.agent_name === name);
+                const { state, word } = agentStateFor(name, reportedStatuses, own);
+                return (
+                  <tr key={name}>
+                    <td className="py-2.5 font-mono text-ink">{name}</td>
+                    <td className="py-2.5"><SymbolStatus state={state} word={word} /></td>
+                    <td className="tabular py-2.5 text-right font-mono text-ink-muted">{own.length}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
       </div>
 
       {/* Live progress (Server-Sent Events) */}
       {streamState !== 'idle' && (
-        <div className="p-5 rounded-xl bg-surface border border-line space-y-3 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-ink uppercase tracking-wider">
-              {streamState === 'live' ? 'Live progress' : 'Progress stream closed'}
-            </span>
-            {streamState === 'live' && <span className="text-accent font-mono animate-pulse">streaming</span>}
-          </div>
+        <section className="space-y-3 rounded-lg border border-line bg-surface p-5">
+          <SectionTitle aside={streamState === 'live' ? 'streaming' : 'closed'}>
+            {streamState === 'live' ? 'Live progress' : 'Progress stream closed'}
+          </SectionTitle>
           {liveProgress && Object.keys(liveProgress.agents || {}).length > 0 ? (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {Object.entries(liveProgress.agents).map(([agent, info]) => (
-                <li key={agent} className="flex items-center justify-between p-2 rounded-lg bg-canvas border border-line">
+                <li key={agent} className="flex items-center justify-between rounded-md border border-line bg-canvas px-3 py-2 text-[13px]">
                   <span className="font-mono text-ink">{agent}</span>
-                  <span className="text-accent">done · {info.findings} findings</span>
+                  <span className="flex items-center gap-2 text-ink-muted">
+                    <SymbolStatus state="ok" word="DONE" />
+                    <span className="tabular font-mono">{info.findings} findings</span>
+                  </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-ink-muted">Waiting for the first agent to finish...</p>
+            <p className="text-[13px] text-ink-muted">Waiting for the first agent to finish…</p>
           )}
-        </div>
+        </section>
       )}
 
-      {/* Agent Findings Section */}
-      <div className="space-y-4">
-        {/* Agent Filter Tabs */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 p-1 bg-surface border border-line rounded-lg text-xs">
-            {agentNames.map((agent) => (
-              <button
-                key={agent}
-                onClick={() => setSelectedAgent(agent)}
-                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  selectedAgent === agent
-                    ? 'bg-accent/15 text-accent border border-accent/30'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                {agent}
-              </button>
-            ))}
-          </div>
-
-          <span className="text-xs text-ink-muted font-mono">
-            Showing {filteredFindings.length} of {findings.length} findings
-          </span>
+      {/* Findings */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle aside={`${filteredFindings.length} of ${findings.length} shown`}>Findings</SectionTitle>
         </div>
 
-        {/* Findings List */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs" role="tablist" aria-label="Filter by agent">
+          {agentNames.map((agent) => (
+            <button
+              key={agent}
+              role="tab"
+              aria-selected={selectedAgent === agent}
+              onClick={() => setSelectedAgent(agent)}
+              className={`rounded-md border px-3 py-1.5 font-medium transition-colors ${
+                selectedAgent === agent
+                  ? 'border-accent/40 bg-accent/10 text-accent'
+                  : 'border-line text-ink-muted hover:text-ink'
+              }`}
+            >
+              {agent}
+            </button>
+          ))}
+        </div>
+
         {filteredFindings.length === 0 ? (
-          <div className="p-12 text-center rounded-xl bg-surface border border-line">
-            <CheckCircle2 className="h-10 w-10 text-accent mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-ink">No Findings Found</h3>
-            <p className="text-xs text-ink-muted mt-1">
-              No issues or anomalies were reported by the selected verification agent for this audit.
+          <div className="rounded-lg border border-line bg-surface p-10 text-center">
+            <CheckCircle2 className="mx-auto mb-3 h-9 w-9 text-success" aria-hidden />
+            <h3 className="text-sm font-medium text-ink">No findings</h3>
+            <p className="mt-1 text-[13px] text-ink-muted">
+              The selected agent reported nothing for this audit.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
             {filteredFindings.map((finding) => {
-              const isExpanded = !!expandedFindings[finding.id];
+              const isExpanded = !!expandedFindings[String(finding.id)];
               const sev = (finding.severity || 'INFO').toUpperCase();
+              const location = finding.file_path
+                ? `${finding.file_path}${finding.line_number ? `:${finding.line_number}` : ''}`
+                : 'project';
 
               return (
-                <div
-                  key={finding.id}
-                  className="rounded-xl bg-surface border border-line overflow-hidden text-xs"
-                >
-                  <div
+                <li key={finding.id}>
+                  <button
+                    type="button"
                     onClick={() => toggleExpand(finding.id)}
-                    className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-surface-raised/60 transition-colors"
+                    aria-expanded={isExpanded}
+                    className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-raised/60"
                   >
-                    <div className="flex items-center gap-3">
-                      <button className="text-ink-muted hover:text-ink">
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </button>
+                    <span className="text-ink-subtle" aria-hidden>
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </span>
+                    <span className={`w-20 shrink-0 font-mono text-[12px] font-semibold uppercase ${SEVERITY_TEXT[sev] ?? 'text-ink-muted'}`}>
+                      {sev}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-medium text-ink">{finding.title}</span>
+                      <span className="block font-mono text-[11px] text-ink-subtle">[{finding.agent_name}]</span>
+                    </span>
+                    <span className="hidden shrink-0 truncate font-mono text-[11px] text-ink-subtle md:block md:max-w-[16rem]">
+                      {location}
+                    </span>
+                  </button>
 
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${
-                        sev === 'CRITICAL' ? 'bg-danger/10 text-danger border border-red-500/30' :
-                        sev === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                        sev === 'MEDIUM' ? 'bg-yellow-500/20 text-warning border border-yellow-500/30' :
-                        sev === 'LOW' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                        'bg-surface-raised text-ink'
-                      }`}>
-                        {sev}
-                      </span>
-
-                      <div>
-                        <span className="font-semibold text-ink block sm:inline mr-2">
-                          {finding.title}
-                        </span>
-                        <span className="text-ink-muted font-mono text-[11px]">
-                          [{finding.agent_name}]
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-ink-muted font-mono text-[11px] shrink-0">
-                      {finding.file_path ? `${finding.file_path}:${finding.line_number || '-'}` : 'Project Scope'}
-                    </div>
-                  </div>
-
-                  {/* Expanded Body / Evidence */}
                   {isExpanded && (
-                    <div className="px-5 pb-5 pt-1 border-t border-line bg-canvas space-y-3">
-                      <div>
-                        <span className="font-semibold text-ink-muted uppercase text-[10px] block mb-1">
-                          Description
-                        </span>
-                        <p className="text-ink leading-relaxed font-sans">{finding.description}</p>
+                    <div className="space-y-4 border-t border-line bg-canvas px-5 pb-5 pt-4 text-[13px]">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <SeverityBadge severity={sev} />
+                        {finding.status && <Badge tone="neutral">{String(finding.status).toLowerCase()}</Badge>}
+                        <span className="font-mono text-[11px] text-ink-subtle md:hidden">{location}</span>
                       </div>
-
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Description</div>
+                        <p className="leading-relaxed text-ink-muted">{finding.description}</p>
+                      </div>
+                      {finding.recommendation && (
+                        <div>
+                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Recommendation</div>
+                          <p className="leading-relaxed text-ink-muted">{finding.recommendation}</p>
+                        </div>
+                      )}
                       {finding.evidence && (
                         <div>
-                          <span className="font-semibold text-ink-muted uppercase text-[10px] block mb-1">
-                            Evidence & Trace
-                          </span>
-                          <pre className="p-3 rounded-lg bg-surface border border-line text-accent/90 font-mono text-[11px] overflow-x-auto whitespace-pre-wrap">
+                          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">Evidence</div>
+                          <pre className="overflow-x-auto whitespace-pre-wrap rounded-md border border-line bg-surface p-3 font-mono text-[11px] text-ink-muted">
                             {typeof finding.evidence === 'object'
                               ? JSON.stringify(finding.evidence, null, 2)
                               : String(finding.evidence)}
@@ -349,12 +398,17 @@ export const AuditDetailView: React.FC<AuditDetailViewProps> = ({ auditId, onBac
                       )}
                     </div>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+
+        {/* The CLI's symbol legend */}
+        <p className="font-mono text-[11px] text-ink-subtle">
+          ✔ OK &nbsp; ✖ FAIL &nbsp; ▲ PARTIAL (an agent failed; the audit is not approved) &nbsp; • INFO
+        </p>
+      </section>
     </div>
   );
 };
