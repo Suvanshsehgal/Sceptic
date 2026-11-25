@@ -11,9 +11,19 @@ from crewai_wrapper import run_fact_checker
 from crewai_blind_tester import run_blind_tester
 from crewai_security_guard import run_security_guard
 from synthesizer import ReportSynthesizer
+from audit_models import AuditContext
+import tracing
 
 logger = logging.getLogger("sceptic.orchestrator")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+def _finish_agent_span(span, findings) -> None:
+    """Puts the outcome of an agent on its span: counts by severity, and a warning when the agent reported an error."""
+    span.update(output=tracing.summarize_findings(findings))
+    errors = [f for f in findings if isinstance(f, dict) and str(f.get("status") or "").upper() == "ERROR"]
+    if errors:
+        span.warn(str(errors[0].get("title") or "agent reported an error"))
+
 
 class AuditOrchestrator:
     """
@@ -59,11 +69,16 @@ class AuditOrchestrator:
         fact_checker_findings: List[Dict[str, Any]] = []
         try:
             logger.info("Executing Fact-Checker Agent...")
-            fact_checker_findings = run_fact_checker(
-                source_code=source_code,
-                file_path=file_path,
-                language=language or "python"
-            )
+            with tracing.observation(
+                "agent.Fact-Checker", as_type="agent",
+                input={"file": tracing.short_path(file_path), "language": language, **tracing.describe_text(source_code, "source")},
+            ) as span:
+                fact_checker_findings = run_fact_checker(
+                    source_code=source_code,
+                    file_path=file_path,
+                    language=language or "python"
+                )
+                _finish_agent_span(span, fact_checker_findings)
             logger.info(f"Fact-Checker completed with {len(fact_checker_findings)} findings.")
         except Exception as e:
             logger.error(f"Fact-Checker Agent failed: {str(e)}")
@@ -82,11 +97,16 @@ class AuditOrchestrator:
         security_guard_findings: List[Dict[str, Any]] = []
         try:
             logger.info("Executing Security Guard Agent...")
-            security_guard_findings = run_security_guard(
-                source_code=source_code,
-                file_path=file_path,
-                run_llm_analysis=True
-            )
+            with tracing.observation(
+                "agent.Security-Guard", as_type="agent",
+                input={"file": tracing.short_path(file_path), "language": language, **tracing.describe_text(source_code, "source")},
+            ) as span:
+                security_guard_findings = run_security_guard(
+                    source_code=source_code,
+                    file_path=file_path,
+                    run_llm_analysis=True
+                )
+                _finish_agent_span(span, security_guard_findings)
             logger.info(f"Security Guard completed with {len(security_guard_findings)} findings.")
         except Exception as e:
             logger.error(f"Security Guard Agent failed: {str(e)}")
@@ -121,14 +141,24 @@ class AuditOrchestrator:
             specification_metadata.validate_isolation()
 
             # Target implementation is provided strictly to execution environment, NOT LLM context
-            blind_tester_findings = run_blind_tester(
-                function_name=specification_metadata.function_name,
-                docstring=specification_metadata.docstring,
-                specification=specification_metadata.specification,
-                implementation_code=source_code,
-                module_name=specification_metadata.module_name,
-                language=getattr(specification_metadata, "language", "python") or "python",
-            )
+            with tracing.observation(
+                "agent.Blind-Tester", as_type="agent",
+                # The span records the specification side only, in line with the isolation rule.
+                input={
+                    "function": specification_metadata.function_name,
+                    "language": getattr(specification_metadata, "language", "python") or "python",
+                    **tracing.describe_text(specification_metadata.docstring, "docstring"),
+                },
+            ) as span:
+                blind_tester_findings = run_blind_tester(
+                    function_name=specification_metadata.function_name,
+                    docstring=specification_metadata.docstring,
+                    specification=specification_metadata.specification,
+                    implementation_code=source_code,
+                    module_name=specification_metadata.module_name,
+                    language=getattr(specification_metadata, "language", "python") or "python",
+                )
+                _finish_agent_span(span, blind_tester_findings)
             logger.info(f"Blind Tester completed with {len(blind_tester_findings)} findings.")
         except Exception as e:
             logger.error(f"Blind Tester Agent failed: {str(e)}")
@@ -161,18 +191,41 @@ class AuditOrchestrator:
         progress_callback(agent_name, finding_count) is called as each agent finishes, so the worker can stream progress.
         """
         language = getattr(specification_metadata, "language", "python") or "python"
-        file_findings = self.run_file_checks(source_code, file_path, language, progress_callback)
-        spec_findings = self.run_spec_checks(source_code, specification_metadata, file_path, progress_callback)
+        ctx = AuditContext(target_path=file_path, files_scanned=[file_path])
 
-        # ========================================================
-        # FAN-IN TO REPORT SYNTHESIZER
-        # ========================================================
-        logger.info("Executing Report Synthesizer (Fan-in)...")
-        report = self.synthesizer.synthesize(
-            fact_checker_findings=file_findings["fact_checker"],
-            blind_tester_findings=spec_findings,
-            security_guard_findings=file_findings["security_guard"],
-        )
-        logger.info(f"Synthesis complete: Trust Score {report['trust_score']}/100, Recommendation: {report['recommendation']}")
+        with tracing.trace(
+            "sceptic.pipeline",
+            input={"file": tracing.short_path(file_path), "language": language, "function": specification_metadata.function_name},
+            tags=["pipeline"],
+            metadata={"audit_id": ctx.audit_id, "file": tracing.short_path(file_path)},
+        ) as root:
+            ctx.trace_id = root.trace_id
 
+            file_findings = self.run_file_checks(source_code, file_path, language, progress_callback)
+            ctx.record(file_findings["fact_checker"], "Fact-Checker", file_path)
+            ctx.record(file_findings["security_guard"], "Security-Guard", file_path)
+
+            # Blind-Tester is run from the specification only. The shared context is never passed to it.
+            spec_findings = self.run_spec_checks(source_code, specification_metadata, file_path, progress_callback)
+            ctx.record(spec_findings, "Blind-Tester", file_path)
+
+            # ========================================================
+            # FAN-IN TO REPORT SYNTHESIZER (reads the shared context)
+            # ========================================================
+            logger.info("Executing Report Synthesizer (Fan-in)...")
+            with tracing.observation("agent.Synthesizer", as_type="agent") as span:
+                report = self.synthesizer.synthesize(
+                    fact_checker_findings=file_findings["fact_checker"],
+                    blind_tester_findings=spec_findings,
+                    security_guard_findings=file_findings["security_guard"],
+                    ctx=ctx,
+                )
+                span.update(output={
+                    "trust_score": report["trust_score"],
+                    "recommendation": report["recommendation"],
+                    "findings": report["total_findings"],
+                })
+            logger.info(f"Synthesis complete: Trust Score {report['trust_score']}/100, Recommendation: {report['recommendation']}")
+
+            root.update(output={"trust_score": report["trust_score"], "recommendation": report["recommendation"]})
         return report

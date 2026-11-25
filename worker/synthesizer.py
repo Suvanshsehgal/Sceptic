@@ -1,5 +1,11 @@
 import json
-from typing import List, Dict, Any, Optional
+import os
+import sys
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional, Sequence
+
+sys.path.insert(0, os.path.dirname(__file__))
+from audit_models import AuditContext, AuditReport, VERIFICATION_AGENTS
 
 class TrustScoreCalculator:
     """
@@ -85,54 +91,95 @@ class TrustScoreCalculator:
 
 class ReportSynthesizer:
     """
-    Synthesizes findings from Fact-Checker, Blind-Tester, and Security-Guard
-    into a structured, executive audit report.
+    Fan-in: reads every agent's findings from the shared AuditContext and builds the structured AuditReport.
+    The score and verdict come only from TrustScoreCalculator. No LLM is involved here.
     """
+    @staticmethod
+    def _default_summary(trust_info: Dict[str, Any], contributions: Dict[str, int], total_findings: int) -> str:
+        return (
+            f"Trust Score: {trust_info['trust_score']}/100 ({trust_info['recommendation']}). "
+            f"Total findings: {total_findings}."
+        )
+
+    def build_report(
+        self,
+        ctx: AuditContext,
+        agents: Sequence[str] = VERIFICATION_AGENTS,
+        summary_fn: Optional[Callable[[Dict[str, Any], Dict[str, int], int], str]] = None,
+    ) -> AuditReport:
+        with ctx._lock:
+            findings = list(ctx.all_findings)
+            outputs = {name: len(items) for name, items in ctx.agent_outputs.items()}
+            statuses = dict(ctx.agent_statuses)
+            events = list(ctx.events)
+            incomplete = list(ctx.incomplete_reasons)
+
+        trust_info = TrustScoreCalculator.calculate(findings)
+        if incomplete and trust_info["recommendation"] == "APPROVE":
+            # Part of the code was never audited. An unchecked file must not be approved, whatever the score says.
+            trust_info["recommendation"] = "REQUEST_CHANGES"
+            trust_info["deductions_detail"].append(
+                f"Audit incomplete ({len(incomplete)} failure(s)): APPROVE withheld."
+            )
+        contributions = {name: outputs.get(name, 0) for name in agents}
+        summary = (summary_fn or self._default_summary)(trust_info, contributions, len(findings))
+        duration = (datetime.now(timezone.utc) - ctx.started_at).total_seconds()
+
+        return AuditReport(
+            audit_id=ctx.audit_id,
+            trace_id=ctx.trace_id,
+            target_path=ctx.target_path,
+            files_scanned=list(ctx.files_scanned),
+            trust_score=trust_info["trust_score"],
+            recommendation=trust_info["recommendation"],
+            summary=summary,
+            severity_breakdown=trust_info["severity_breakdown"],
+            agent_contributions=contributions,
+            agent_statuses=statuses,
+            deductions_detail=trust_info["deductions_detail"],
+            incomplete_reasons=incomplete,
+            findings=findings,
+            total_findings=len(findings),
+            duration_seconds=round(duration, 3),
+            execution_log=events,
+        )
+
+    @staticmethod
+    def _three_agent_summary(trust_info: Dict[str, Any], contributions: Dict[str, int], total_findings: int) -> str:
+        breakdown = trust_info["severity_breakdown"]
+        recommendation = trust_info["recommendation"]
+        lines = [
+            f"Audit completed with Trust Score: {trust_info['trust_score']}/100 ({recommendation}).",
+            f"Total findings: {total_findings} (Critical: {breakdown['CRITICAL']}, High: {breakdown['HIGH']}, Medium: {breakdown['MEDIUM']}, Low: {breakdown['LOW']}).",
+            f"Agent contributions: Fact-Checker ({contributions['Fact-Checker']}), Blind-Tester ({contributions['Blind-Tester']}), Security-Guard ({contributions['Security-Guard']}).",
+        ]
+        if recommendation == "APPROVE":
+            lines.append("Code meets specification contracts and static security policies.")
+        elif recommendation == "REQUEST_CHANGES":
+            lines.append("Code has minor discrepancies or security warnings that should be addressed before merging.")
+        else:
+            lines.append("Critical vulnerabilities or specification violations detected. Code blocked.")
+        return "\n".join(lines)
+
     def synthesize(
         self,
         fact_checker_findings: List[Dict[str, Any]],
         blind_tester_findings: List[Dict[str, Any]],
-        security_guard_findings: List[Dict[str, Any]]
+        security_guard_findings: List[Dict[str, Any]],
+        ctx: Optional[AuditContext] = None,
     ) -> Dict[str, Any]:
-        all_findings = []
-        all_findings.extend(fact_checker_findings)
-        all_findings.extend(blind_tester_findings)
-        all_findings.extend(security_guard_findings)
-
-        trust_info = TrustScoreCalculator.calculate(all_findings)
-        trust_score = trust_info["trust_score"]
-        recommendation = trust_info["recommendation"]
-        severity_breakdown = trust_info["severity_breakdown"]
-
-        # Calculate agent contributions
-        agent_contributions = {
-            "Fact-Checker": len(fact_checker_findings),
-            "Blind-Tester": len(blind_tester_findings),
-            "Security-Guard": len(security_guard_findings)
-        }
-
-        # Synthesize executive summary
-        summary_lines = [
-            f"Audit completed with Trust Score: {trust_score}/100 ({recommendation}).",
-            f"Total findings: {len(all_findings)} (Critical: {severity_breakdown['CRITICAL']}, High: {severity_breakdown['HIGH']}, Medium: {severity_breakdown['MEDIUM']}, Low: {severity_breakdown['LOW']}).",
-            f"Agent contributions: Fact-Checker ({agent_contributions['Fact-Checker']}), Blind-Tester ({agent_contributions['Blind-Tester']}), Security-Guard ({agent_contributions['Security-Guard']})."
-        ]
-
-        if recommendation == "APPROVE":
-            summary_lines.append("Code meets specification contracts and static security policies.")
-        elif recommendation == "REQUEST_CHANGES":
-            summary_lines.append("Code has minor discrepancies or security warnings that should be addressed before merging.")
-        else:
-            summary_lines.append("Critical vulnerabilities or specification violations detected. Code blocked.")
-
-        executive_summary = "\n".join(summary_lines)
-
-        return {
-            "trust_score": trust_score,
-            "recommendation": recommendation,
-            "summary": executive_summary,
-            "severity_breakdown": severity_breakdown,
-            "agent_contributions": agent_contributions,
-            "total_findings": len(all_findings),
-            "all_findings": all_findings
-        }
+        """
+        Three-agent synthesis used by the single-function pipeline. Returns the AuditReport as a dict.
+        Pass the shared context to keep its execution log; otherwise a new one is created.
+        """
+        if ctx is None:
+            ctx = AuditContext()
+            ctx.record(fact_checker_findings, "Fact-Checker")
+            ctx.record(blind_tester_findings, "Blind-Tester")
+            ctx.record(security_guard_findings, "Security-Guard")
+        report = self.build_report(
+            ctx,
+            agents=("Fact-Checker", "Blind-Tester", "Security-Guard"),
+            summary_fn=self._three_agent_summary,
+        )
+        return report.to_dict()

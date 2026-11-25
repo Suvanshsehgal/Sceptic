@@ -17,6 +17,8 @@ import models
 from orchestrator import AuditOrchestrator
 from blind_tester import SpecificationMetadata
 from crewai_reporter import post_pr_summary
+from audit_models import render_markdown
+import tracing
 
 logger = logging.getLogger("sceptic.celery")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -49,10 +51,8 @@ def _post_pr_summary(payload: dict, report: dict) -> None:
         pr_number = pr_data.get("number")
     if not repo or pr_number is None:
         return
-    body = (
-        f"**Sceptic verdict: {report.get('recommendation')}** "
-        f"(Trust Score {report.get('trust_score')}/100)\n\n{report.get('summary', '')}"
-    )
+    # The Reporter publishes the structured report (verdict, per-agent table, top findings) as Markdown.
+    body = render_markdown(report)
     try:
         result = post_pr_summary(str(repo), int(pr_number), body)
         logger.info(f"PR summary for {repo}#{pr_number}: {result}")
@@ -72,6 +72,7 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
             audit_run_id = uuid_pkg.UUID(audit_run_id)
         except Exception:
             pass
+    tracing.instrument_frameworks(("crewai", "google_adk"))
     db = SessionLocal()
     try:
         audit_run = db.query(models.AuditRun).filter(models.AuditRun.id == audit_run_id).first()
@@ -132,6 +133,7 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
                 audit_run_id=audit_run.id,
                 agent_name=f.get("agent_name", "Unknown-Agent"),
                 severity=f.get("severity", "INFO"),
+                status=str(f.get("status") or "OPEN")[:50],
                 title=f.get("title", "Finding"),
                 description=f.get("description", ""),
                 file_path=f.get("file_path", file_path),
@@ -147,6 +149,9 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
         audit_run.trust_score = report.get("trust_score")
         audit_run.summary = report.get("summary")
         audit_run.recommendation = report.get("recommendation")
+        audit_run.trace_id = report.get("trace_id")
+        previous = dict(audit_run.progress or {})
+        audit_run.progress = {**previous, "stage": "COMPLETED", "statuses": report.get("agent_statuses", {})}
         db.commit()
 
         logger.info(f"AuditRun {audit_run_id} completed successfully. Score: {audit_run.trust_score}")
@@ -174,3 +179,4 @@ def execute_audit_pipeline(self, audit_run_id, payload: dict):
         return {"status": "FAILED", "error": str(e)}
     finally:
         db.close()
+        tracing.flush()
