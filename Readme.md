@@ -517,4 +517,4 @@ Phase 15 implements the **Rollback Agent**, an autonomous recovery engine that s
 
 ### CLI Commands
 - `sceptic rollback [deployment_id] [--target <id>] [--reason <text>]`: Execute rollback from CLI.
-- `sceptic rollback [deployment_id] --dry-run`: Evaluate pre-flight safety checks in terminal without executing.
+- `sceptic rollback [deployment_id] --dry-run`: Evaluate pre-flight safety checks in terminal without executing..
