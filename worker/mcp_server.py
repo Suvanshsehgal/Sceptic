@@ -12,6 +12,8 @@ import re
 import sys
 import json
 import logging
+import inspect
+import functools
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -21,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fact_checker import analyze_code
 from blind_tester import SpecificationMetadata, run_blind_test
 from security_guard import run_security_scan
+import tracing
 import leak_hunter
 import dependency_audit
 import docstring_judge
@@ -33,21 +36,51 @@ REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 mcp = FastMCP("sceptic-tools")
 
 
-@mcp.tool()
+def traced_tool(fn):
+    """
+    Registers fn as an MCP tool that records a span. The tool gains an optional `trace_context` argument: the
+    client sends its current trace context there, so this process's spans (and its Groq generations) are children
+    of the client's span. Without tracing the argument is ignored.
+    """
+    signature = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*args, trace_context: str = "", **kwargs):
+        bound = {name: value for name, value in zip(signature.parameters, args)}
+        bound.update(kwargs)
+        with tracing.observation(
+            f"tool.{fn.__name__}",
+            as_type="tool",
+            input=tracing.summarize_tool_input(bound),
+            trace_context=tracing.decode_context(trace_context),
+        ) as span:
+            result = fn(*args, **kwargs)
+            if isinstance(result, str):
+                span.update(output=tracing.summarize_tool_output(result))
+            return result
+
+    wrapper.__signature__ = signature.replace(parameters=[
+        *signature.parameters.values(),
+        inspect.Parameter("trace_context", inspect.Parameter.KEYWORD_ONLY, default="", annotation=str),
+    ])
+    return mcp.tool()(wrapper)
+
+
+@traced_tool
 def verify_api_usage(source_code: str, file_path: str = "target.py", language: str = "python") -> str:
     """Deterministically verify API calls and signatures in source code. Returns a JSON list of findings."""
     findings = analyze_code(source_code, file_path=file_path, language=language or None)
     return json.dumps(findings, indent=2)
 
 
-@mcp.tool()
+@traced_tool
 def scan_security(source_code: str, file_path: str = "target.py", run_llm_analysis: bool = True) -> str:
     """Run Semgrep and Bandit (plus optional Groq triage) on source code. Returns a JSON list of findings."""
     findings = run_security_scan(source_code, file_path=file_path, run_llm_analysis=run_llm_analysis)
     return json.dumps(findings, indent=2)
 
 
-@mcp.tool()
+@traced_tool
 def run_blind_tests(
     function_name: str,
     docstring: str,
@@ -71,7 +104,7 @@ def run_blind_tests(
     return json.dumps(findings, indent=2)
 
 
-@mcp.tool()
+@traced_tool
 def post_github_comment(repository: str, pr_number: int, body: str) -> str:
     """
     Post a summary comment on a GitHub pull request. Without GITHUB_TOKEN the call is a dry run and nothing is posted.
@@ -96,23 +129,33 @@ def post_github_comment(repository: str, pr_number: int, body: str) -> str:
     return json.dumps({"posted": resp.status_code == 201, "status_code": resp.status_code, "dry_run": False})
 
 
-@mcp.tool()
+@traced_tool
 def scan_secrets(path: str) -> str:
     """Scan a file or directory for committed secrets with Gitleaks. Secret values are redacted. Returns JSON findings."""
     return json.dumps(leak_hunter.scan_secrets(path), indent=2)
 
 
-@mcp.tool()
+@traced_tool
 def audit_dependencies(path: str) -> str:
     """Audit requirements.txt (pip-audit) and package-lock.json (npm audit) next to a path. Returns JSON findings."""
     return json.dumps(dependency_audit.audit_dependencies(path), indent=2)
 
 
-@mcp.tool()
+@traced_tool
 def judge_docstrings(source_code: str, file_path: str = "target.py") -> str:
     """Check that each docstring describes its function, with one LLM call. Skipped when no Groq key is set."""
     return json.dumps(docstring_judge.judge_docstrings(source_code, file_path), indent=2)
 
 
+@mcp.tool()
+def llm_usage() -> str:
+    """Returns this server process's LLM call and token counters as JSON. The LLM calls run here, not in the caller."""
+    from llm_client import METER
+    return json.dumps(METER.totals())
+
+
 if __name__ == "__main__":
-    mcp.run()
+    try:
+        mcp.run()
+    finally:
+        tracing.shutdown()  # send any spans still queued before this process exits

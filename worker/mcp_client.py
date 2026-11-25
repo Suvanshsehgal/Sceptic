@@ -13,7 +13,14 @@ import logging
 import threading
 from typing import Any, Dict, Optional
 
+import tracing
+import guardrails
 from mcp import ClientSession, StdioServerParameters
+
+# Tools whose output is a list of findings. Their output is validated before any agent uses it.
+FINDING_TOOLS = frozenset({
+    "verify_api_usage", "scan_security", "run_blind_tests", "scan_secrets", "audit_dependencies", "judge_docstrings",
+})
 from mcp.client.stdio import stdio_client
 
 logger = logging.getLogger("sceptic.mcp_client")
@@ -83,6 +90,27 @@ class SceptiMCPClient:
 
     def call_tool(self, name: str, arguments: Dict[str, Any], timeout: float = DEFAULT_CALL_TIMEOUT_SECONDS) -> str:
         """Calls an MCP tool and returns its text output. Raises MCPToolError on any failure."""
+        with tracing.observation(
+            f"mcp.{name}", as_type="tool", input=tracing.summarize_tool_input(arguments)
+        ) as span:
+            arguments = dict(arguments)
+            context = tracing.encode_context(tracing.current_trace_context())
+            if context:
+                # The tool runs in another process. This lets its spans join the trace under this one.
+                arguments["trace_context"] = context
+            text = self._call_tool(name, arguments, timeout)
+            if name in FINDING_TOOLS:
+                # Fail closed: output that is not a well-formed list of findings is an error, never a pass.
+                try:
+                    guardrails.validate_findings_json(text)
+                except guardrails.GuardViolation as exc:
+                    guardrails.LOG.record("mcp", "tool_output_blocked", str(exc), tool=name)
+                    span.fail(f"output failed validation: {exc}")
+                    raise MCPToolError(f"Tool '{name}' returned output that failed validation: {exc}") from exc
+            span.update(output=tracing.summarize_tool_output(text))
+            return text
+
+    def _call_tool(self, name: str, arguments: Dict[str, Any], timeout: float) -> str:
         self._ensure_started()
         session = self._session
         loop = self._loop
