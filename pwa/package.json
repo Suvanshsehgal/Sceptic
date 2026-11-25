@@ -1,0 +1,14 @@
+{
+  "name": "sceptic-pwa",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Progressive web app build of the Sceptic web portal. Compiles ../frontend unchanged and adds the PWA layer.",
+  "type": "module",
+  "scripts": {
+    "build": "node ../frontend/node_modules/vite/bin/vite.js build --config vite.config.mjs",
+    "dev": "node ../frontend/node_modules/vite/bin/vite.js --config vite.config.mjs",
+    "preview": "node ../frontend/node_modules/vite/bin/vite.js preview --config vite.config.mjs",
+    "check": "node scripts/check-pwa.mjs",
+    "test:sw": "node scripts/test-sw.mjs"
+  }
+}
