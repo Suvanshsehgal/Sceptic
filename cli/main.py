@@ -47,6 +47,8 @@ if CLI_DIR not in sys.path:
     sys.path.insert(0, CLI_DIR)
 
 from audit_service import AuditService
+from audit_models import render_markdown
+import tracing
 
 from config import CLIConfig
 from auth_manager import AuthManager
@@ -1148,19 +1150,20 @@ def _environment_checks():
 # 5. AUDIT COMMAND (EXISTING PIPELINE + BACKEND SYNC)
 # ========================================================
 
-def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = False) -> int:
+def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = False, markdown_output: bool = False) -> int:
     """
     Core executor for Sceptic audit pipeline. Returns appropriate exit code without exiting python process.
     """
     service = AuditService()
+    quiet = json_output or markdown_output
 
-    if not json_output:
+    if not quiet:
         theme.header("Audit")
         console.print(theme.kv_table([("Target", path)]))
 
     try:
         # Execute audit with live spinner progress
-        if not json_output:
+        if not quiet:
             with console.status("[bold green]Executing verification agents in-process...[/bold green]", spinner="dots") as status:
                 def progress_cb(stage: str, msg: str):
                     status.update(f"[bold green]{msg}[/bold green]")
@@ -1198,6 +1201,12 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
         return EXIT_CLI_ERROR
 
     # Output formatting
+    if markdown_output:
+        print(render_markdown(report))
+        if report.get("recommendation") in ("BLOCK", "REQUEST_CHANGES") or report.get("trust_score", 100) < 80:
+            return EXIT_AUDIT_FAILURE
+        return EXIT_SUCCESS
+
     if json_output:
         print(json.dumps(report, indent=2))
         if report.get("recommendation") in ("BLOCK", "REQUEST_CHANGES") or report.get("trust_score", 100) < 80:
@@ -1205,6 +1214,9 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
         return EXIT_SUCCESS
 
     _display_rich_report(report, verbose=verbose)
+    link = tracing.trace_url(report.get("trace_id"))
+    if link:
+        theme.info(f"Agent trace: {link}")
 
     # Sync audit run with backend and active project
     token = AuthManager.get_token()
@@ -1222,6 +1234,7 @@ def execute_audit_flow(path: str, verbose: bool = False, json_output: bool = Fal
                         "summary": str(report.get("summary", "")),
                         "recommendation": str(report.get("recommendation", "UNKNOWN")),
                         "commit_sha": "cli-local",
+                        "trace_id": report.get("trace_id"),
                         "findings": report.get("findings", [])
                     },
                     headers={"Authorization": f"Bearer {token}"}
@@ -1252,12 +1265,23 @@ def audit(
         False,
         "--json",
         help="Output raw JSON results without Rich formatting."
+    ),
+    markdown_output: bool = typer.Option(
+        False,
+        "--markdown",
+        help="Output the report as Markdown (verdict, per-agent table, top findings)."
     )
 ):
     """
     Run full in-process Sceptic code verification against a target file or project.
     """
-    code = execute_audit_flow(path, verbose=verbose, json_output=json_output)
+    if json_output and markdown_output:
+        theme.error("Use either --json or --markdown, not both.", code=EXIT_CLI_ERROR)
+        raise typer.Exit(code=EXIT_CLI_ERROR)
+    try:
+        code = execute_audit_flow(path, verbose=verbose, json_output=json_output, markdown_output=markdown_output)
+    finally:
+        tracing.shutdown()   # send queued spans before the process exits
     raise typer.Exit(code=code)
 
 
