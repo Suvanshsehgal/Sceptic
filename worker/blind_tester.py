@@ -278,8 +278,13 @@ class BlindTestExecutor:
             return {"success": False, "error": str(e), "passed": 0, "failed": 1,
                     "failures": [{"test_name": "unsupported", "message": str(e)}]}
 
-        base_dir = os.path.dirname(__file__)
+        # SCEPTIC_SANDBOX_WORKDIR lets a containerised worker use a folder that exists at the same path on the Docker
+        # host, which the sandbox container needs for its bind mount.
+        base_dir = os.getenv("SCEPTIC_SANDBOX_WORKDIR") or os.path.dirname(__file__)
         with tempfile.TemporaryDirectory(dir=base_dir) as temp_dir:
+            # The sandbox runs as user 65534. mkdtemp creates a 0700 folder, which that user cannot read on Linux,
+            # so the folder is made readable. It holds only the generated test and the audited file.
+            os.chmod(temp_dir, 0o755)
             with open(os.path.join(temp_dir, spec.impl_file), "w", encoding="utf-8") as f:
                 f.write(target_code)
             with open(os.path.join(temp_dir, spec.test_file), "w", encoding="utf-8") as f:
@@ -313,8 +318,13 @@ class BlindTestExecutor:
         if language != "python":
             return self._execute_non_python(target_code, generated_test_code, module_name, language)
 
-        base_dir = os.path.dirname(__file__)
+        # SCEPTIC_SANDBOX_WORKDIR lets a containerised worker use a folder that exists at the same path on the Docker
+        # host, which the sandbox container needs for its bind mount.
+        base_dir = os.getenv("SCEPTIC_SANDBOX_WORKDIR") or os.path.dirname(__file__)
         with tempfile.TemporaryDirectory(dir=base_dir) as temp_dir:
+            # The sandbox runs as user 65534. mkdtemp creates a 0700 folder, which that user cannot read on Linux,
+            # so the folder is made readable. It holds only the generated test and the audited file.
+            os.chmod(temp_dir, 0o755)
             # 1. Write the target implementation
             target_path = os.path.join(temp_dir, f"{module_name}.py")
             with open(target_path, "w", encoding="utf-8") as f:
@@ -432,6 +442,23 @@ def run_blind_test(
     """
     # Verify isolation
     spec.validate_isolation()
+
+    # Docstring and specification text come from the audited code, so they are untrusted. A rejected text is not
+    # sent to the model, and the audit records an UNRESOLVED finding rather than a pass.
+    import guardrails
+    for label, text in (("docstring", spec.docstring), ("specification", spec.specification)):
+        verdict = guardrails.check_and_log(text, "spec", "Blind-Tester")
+        if not verdict.allowed:
+            return [{
+                "agent_name": "Blind-Tester",
+                "severity": "INFO",
+                "status": "UNRESOLVED",
+                "title": "Blind-Tester skipped: input guardrail",
+                "description": f"The {label} of '{spec.function_name}' was not sent to the model: "
+                               + "; ".join(verdict.reasons) + ".",
+                "file_path": file_path,
+                "line_number": None,
+            }]
 
     generator = BlindTestGenerator()
     generated_test_code = generator.generate_tests(spec)
