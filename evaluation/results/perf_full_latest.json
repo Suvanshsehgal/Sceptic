@@ -1,0 +1,248 @@
+{
+  "mode": "full",
+  "started_at": "2026-11-18T18:37:15.619443+00:00",
+  "cases": 8,
+  "repeats": 1,
+  "audits": 8,
+  "wall_seconds": {
+    "total": 73.16,
+    "p50": 8.84,
+    "p95": 11.102,
+    "mean": 8.981,
+    "max": 11.102
+  },
+  "agents": {
+    "Leak-Hunter": {
+      "calls": 8,
+      "errors": 0,
+      "mean_seconds": 0.4786,
+      "p95_seconds": 0.5037
+    },
+    "Purana-Saman": {
+      "calls": 8,
+      "errors": 0,
+      "mean_seconds": 1.8651,
+      "p95_seconds": 2.2052
+    },
+    "Jhooti-Docstring": {
+      "calls": 8,
+      "errors": 0,
+      "mean_seconds": 1.8644,
+      "p95_seconds": 2.205
+    },
+    "Fact-Checker": {
+      "calls": 8,
+      "errors": 0,
+      "mean_seconds": 0.004,
+      "p95_seconds": 0.0045
+    },
+    "Security-Guard": {
+      "calls": 8,
+      "errors": 0,
+      "mean_seconds": 4.3858,
+      "p95_seconds": 6.4341
+    },
+    "Blind-Tester": {
+      "calls": 8,
+      "errors": 8,
+      "mean_seconds": 2.722,
+      "p95_seconds": 3.6412
+    }
+  },
+  "agents_unavailable_in_this_run": [
+    "Blind-Tester"
+  ],
+  "llm": {
+    "calls_total": 33,
+    "failed_total": 0,
+    "calls_per_audit": 4.12,
+    "input_tokens_total": 4319,
+    "output_tokens_total": 7858,
+    "input_tokens_per_audit": 539.9,
+    "output_tokens_per_audit": 982.2
+  },
+  "cost": {
+    "price_input_per_million_usd": 0.15,
+    "price_output_per_million_usd": 0.6,
+    "cost_per_audit_usd": 0.00067,
+    "cost_per_1000_audits_usd": 0.67
+  },
+  "audits_detail": [
+    {
+      "file": "bug01_hallucinated_os_path.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 10.0144,
+      "trust_score": 72,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 504,
+      "output_tokens": 1218,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4986,
+        "Purana-Saman": 2.2052,
+        "Jhooti-Docstring": 2.205,
+        "Fact-Checker": 0.0039,
+        "Security-Guard": 4.1586,
+        "Blind-Tester": 3.6412
+      }
+    },
+    {
+      "file": "bug02_hallucinated_json.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 8.8401,
+      "trust_score": 72,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 501,
+      "output_tokens": 993,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4562,
+        "Purana-Saman": 1.6324,
+        "Jhooti-Docstring": 1.6316,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.1122,
+        "Blind-Tester": 3.0876
+      }
+    },
+    {
+      "file": "bug03_hallucinated_math.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 8.3659,
+      "trust_score": 72,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 500,
+      "output_tokens": 712,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4608,
+        "Purana-Saman": 1.9615,
+        "Jhooti-Docstring": 1.9608,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.1629,
+        "Blind-Tester": 2.233
+      }
+    },
+    {
+      "file": "bug04_hallucinated_re.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 9.1056,
+      "trust_score": 72,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 509,
+      "output_tokens": 870,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4613,
+        "Purana-Saman": 1.9879,
+        "Jhooti-Docstring": 1.987,
+        "Fact-Checker": 0.0039,
+        "Security-Guard": 4.1261,
+        "Blind-Tester": 2.9836
+      }
+    },
+    {
+      "file": "bug05_spec_add_returns_product.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 8.1979,
+      "trust_score": 92,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 486,
+      "output_tokens": 793,
+      "agent_seconds": {
+        "Leak-Hunter": 0.498,
+        "Purana-Saman": 1.7882,
+        "Jhooti-Docstring": 1.7876,
+        "Fact-Checker": 0.004,
+        "Security-Guard": 3.9999,
+        "Blind-Tester": 2.4015
+      }
+    },
+    {
+      "file": "bug06_spec_larger_returns_smaller.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 8.416,
+      "trust_score": 92,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 497,
+      "output_tokens": 827,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5037,
+        "Purana-Saman": 1.7248,
+        "Jhooti-Docstring": 1.7239,
+        "Fact-Checker": 0.0034,
+        "Security-Guard": 4.0632,
+        "Blind-Tester": 2.6209
+      }
+    },
+    {
+      "file": "bug07_spec_ratio_floor_division.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 7.8075,
+      "trust_score": 92,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 4,
+      "llm_failed_calls": 0,
+      "input_tokens": 497,
+      "output_tokens": 691,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4578,
+        "Purana-Saman": 1.5855,
+        "Jhooti-Docstring": 1.5848,
+        "Fact-Checker": 0.0045,
+        "Security-Guard": 4.0292,
+        "Blind-Tester": 2.1843
+      }
+    },
+    {
+      "file": "bug08_command_injection_os_system.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 11.1021,
+      "trust_score": 55,
+      "recommendation": "BLOCK",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 5,
+      "llm_failed_calls": 0,
+      "input_tokens": 825,
+      "output_tokens": 1754,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4923,
+        "Purana-Saman": 2.0357,
+        "Jhooti-Docstring": 2.0347,
+        "Fact-Checker": 0.0045,
+        "Security-Guard": 6.4341,
+        "Blind-Tester": 2.6239
+      }
+    }
+  ]
+}

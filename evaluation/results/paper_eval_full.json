@@ -1,0 +1,5779 @@
+{
+ "mode": "full",
+ "repeats": 3,
+ "started_at": "2026-11-24T14:14:08.686554+00:00",
+ "sandbox": "docker",
+ "model": "openai/gpt-oss-120b",
+ "runs": [
+  {
+   "repeat": 1,
+   "file": "bug01_hallucinated_os_path.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 15.608,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 504,
+   "output_tokens": 1379,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'join_paths'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug02_hallucinated_json.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 12.987,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 501,
+   "output_tokens": 1024,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'parse_config'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug03_hallucinated_math.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 9.721,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 500,
+   "output_tokens": 685,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'root'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug04_hallucinated_re.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 10.584,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 509,
+   "output_tokens": 738,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'find_all_digits'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug05_spec_add_returns_product.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 36.169,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 486,
+   "output_tokens": 731,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'add'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug06_spec_larger_returns_smaller.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 12.595,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 497,
+   "output_tokens": 878,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'larger'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug07_spec_ratio_floor_division.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 9.802,
+   "trust_score": 57,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 497,
+   "output_tokens": 893,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'ratio'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug08_command_injection_os_system.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 13.927,
+   "trust_score": 20,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 825,
+   "output_tokens": 2130,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B605 (start_process_with_a_shell): Starting a process with a shell, possible injection detected, security issue",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug09_subprocess_shell_true.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 12.439,
+   "trust_score": 37,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 876,
+   "output_tokens": 1921,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B602 (subprocess_popen_with_shell_equals_true): subprocess call with shell=True identified, security issue.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug10_eval_user_input.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 11.298,
+   "trust_score": 50,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 803,
+   "output_tokens": 1485,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B307 (blacklist): Use of possibly insecure function - consider using safer ast.literal_eval.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-dangerous-eval: Detected use of dynamic code evaluation (eval or exec).",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in calculate",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug11_pickle_untrusted.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 12.902,
+   "trust_score": 67,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 868,
+   "output_tokens": 1973,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B403 (blacklist): Consider possible security implications associated with pickle module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B301 (blacklist): Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possib",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-insecure-deserialization: Insecure deserialization using pickle or unsafe YAML loader.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_session",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "bug12_hardcoded_password.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 11.2,
+   "trust_score": 17,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 790,
+   "output_tokens": 1507,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B105 (hardcoded_password_string): Possible hardcoded password: 'Pr0d-hunter2-secret'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in connect_info",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in connect_info",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in connect_info",
+     "assertion_error": true
+    },
+    {
+     "agent": "Leak-Hunter",
+     "severity": "HIGH",
+     "status": "OPEN",
+     "title": "[GITLEAKS] generic-api-key in bug12_hardcoded_password.py",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean01_path_join.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 10.268,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 480,
+   "output_tokens": 989,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for join",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean02_json_parse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 11.532,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "PARTIAL_FAILURE",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 485,
+   "output_tokens": 1085,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for parse",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for parse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean03_hypotenuse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 12.725,
+   "trust_score": 95,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 532,
+   "output_tokens": 1136,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for hypotenuse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean04_slugify.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 12.216,
+   "trust_score": 50,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 531,
+   "output_tokens": 996,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean05_mean.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.203,
+   "trust_score": 95,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 513,
+   "output_tokens": 755,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for mean",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean06_celsius.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.754,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 523,
+   "output_tokens": 615,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for celsius_to_fahrenheit",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean07_safe_run.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 13.722,
+   "trust_score": 26,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 5,
+   "llm_failed": 0,
+   "input_tokens": 1093,
+   "output_tokens": 2392,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B607 (start_process_with_partial_path): Starting a process with a partial executable path",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B603 (subprocess_without_shell_equals_true): subprocess call - check for execution of untrusted input.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean08_sha256.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.708,
+   "trust_score": 75,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 498,
+   "output_tokens": 1028,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in file_digest",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean09_parse_int.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.008,
+   "trust_score": 70,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 555,
+   "output_tokens": 758,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean10_chunks.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.969,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 543,
+   "output_tokens": 978,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for chunks",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean11_dedupe.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 11.49,
+   "trust_score": 85,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 559,
+   "output_tokens": 899,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for dedupe_keep_order",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean12_clamp.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 10.346,
+   "trust_score": 65,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 532,
+   "output_tokens": 1085,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in clamp",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean13_read_json.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 11.375,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 582,
+   "output_tokens": 1047,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_settings",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean14_word_count.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.955,
+   "trust_score": 65,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 520,
+   "output_tokens": 796,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in word_counts",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "file": "clean15_days_between.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.866,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 4,
+   "llm_failed": 0,
+   "input_tokens": 540,
+   "output_tokens": 822,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for days_between",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug01_hallucinated_os_path.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 9.123,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 481,
+   "output_tokens": 1094,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'join_paths'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug02_hallucinated_json.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 10.018,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 477,
+   "output_tokens": 929,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'parse_config'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug03_hallucinated_math.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 8.423,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 476,
+   "output_tokens": 683,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'root'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug04_hallucinated_re.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 8.45,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 483,
+   "output_tokens": 839,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'find_all_digits'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug05_spec_add_returns_product.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 7.684,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 466,
+   "output_tokens": 646,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'add'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug06_spec_larger_returns_smaller.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 8.762,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 477,
+   "output_tokens": 815,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'larger'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug07_spec_ratio_floor_division.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 9.275,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 475,
+   "output_tokens": 815,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'ratio'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug08_command_injection_os_system.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 11.819,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 801,
+   "output_tokens": 1538,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B605 (start_process_with_a_shell): Starting a process with a shell, possible injection detected, security issue",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug09_subprocess_shell_true.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 10.9,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 850,
+   "output_tokens": 1945,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B602 (subprocess_popen_with_shell_equals_true): subprocess call with shell=True identified, security issue.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug10_eval_user_input.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 11.418,
+   "trust_score": 50,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 777,
+   "output_tokens": 2042,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B307 (blacklist): Use of possibly insecure function - consider using safer ast.literal_eval.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-dangerous-eval: Detected use of dynamic code evaluation (eval or exec).",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in calculate",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug11_pickle_untrusted.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 11.903,
+   "trust_score": 67,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 843,
+   "output_tokens": 1937,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B403 (blacklist): Consider possible security implications associated with pickle module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B301 (blacklist): Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possib",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-insecure-deserialization: Insecure deserialization using pickle or unsafe YAML loader.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_session",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "bug12_hardcoded_password.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 17.104,
+   "trust_score": 37,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 767,
+   "output_tokens": 1531,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B105 (hardcoded_password_string): Possible hardcoded password: 'Pr0d-hunter2-secret'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in connect_info",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in connect_info",
+     "assertion_error": true
+    },
+    {
+     "agent": "Leak-Hunter",
+     "severity": "HIGH",
+     "status": "OPEN",
+     "title": "[GITLEAKS] generic-api-key in bug12_hardcoded_password.py",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean01_path_join.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.181,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 462,
+   "output_tokens": 829,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for join",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean02_json_parse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 10.105,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 463,
+   "output_tokens": 1285,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for parse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean03_hypotenuse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.995,
+   "trust_score": 75,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 501,
+   "output_tokens": 1036,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in hypotenuse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean04_slugify.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.616,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 498,
+   "output_tokens": 1112,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean05_mean.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.51,
+   "trust_score": 75,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 484,
+   "output_tokens": 686,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in mean",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean06_celsius.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.219,
+   "trust_score": 80,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 489,
+   "output_tokens": 631,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in celsius_to_fahrenheit",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean07_safe_run.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 14.191,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 1060,
+   "output_tokens": 2256,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B607 (start_process_with_partial_path): Starting a process with a partial executable path",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B603 (subprocess_without_shell_equals_true): subprocess call - check for execution of untrusted input.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean08_sha256.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 11.486,
+   "trust_score": 75,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 473,
+   "output_tokens": 894,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in file_digest",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean09_parse_int.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 12.221,
+   "trust_score": 10,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 522,
+   "output_tokens": 817,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean10_chunks.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 10.326,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 511,
+   "output_tokens": 998,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for chunks",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean11_dedupe.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.178,
+   "trust_score": 85,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 521,
+   "output_tokens": 1047,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for dedupe_keep_order",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean12_clamp.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.063,
+   "trust_score": 85,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 502,
+   "output_tokens": 1037,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for clamp",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean13_read_json.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.283,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 541,
+   "output_tokens": 1036,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_settings",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean14_word_count.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.942,
+   "trust_score": 45,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 485,
+   "output_tokens": 697,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in word_counts",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in word_counts",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "file": "clean15_days_between.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.212,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 500,
+   "output_tokens": 1120,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for days_between",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug01_hallucinated_os_path.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 9.968,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 481,
+   "output_tokens": 1181,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'join_paths'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join_paths",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug02_hallucinated_json.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 11.021,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 477,
+   "output_tokens": 892,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'parse_config'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_config",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug03_hallucinated_math.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 9.065,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 732,
+   "output_tokens": 613,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'root'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in root",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug04_hallucinated_re.py",
+   "kind": "bug",
+   "category": "hallucinated_api",
+   "expected_agent": "Fact-Checker",
+   "seconds": 9.235,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 483,
+   "output_tokens": 922,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'find_all_digits'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "HIGH",
+     "status": "INVALID",
+     "title": "Non-existent API",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in find_all_digits",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug05_spec_add_returns_product.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 8.588,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 466,
+   "output_tokens": 842,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'add'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in add",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug06_spec_larger_returns_smaller.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 10.148,
+   "trust_score": 17,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 477,
+   "output_tokens": 928,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'larger'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in larger",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug07_spec_ratio_floor_division.py",
+   "kind": "bug",
+   "category": "spec_mismatch",
+   "expected_agent": "Blind-Tester",
+   "seconds": 8.582,
+   "trust_score": 17,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 475,
+   "output_tokens": 722,
+   "findings": [
+    {
+     "agent": "Jhooti-Docstring",
+     "severity": "LOW",
+     "status": "OPEN",
+     "title": "Docstring does not match 'ratio'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in ratio",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug08_command_injection_os_system.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 12.779,
+   "trust_score": 20,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 801,
+   "output_tokens": 1777,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B605 (start_process_with_a_shell): Starting a process with a shell, possible injection detected, security issue",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in remove_upload",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug09_subprocess_shell_true.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 14.668,
+   "trust_score": 37,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 850,
+   "output_tokens": 2472,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[BANDIT] B602 (subprocess_popen_with_shell_equals_true): subprocess call with shell=True identified, security issue.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-command-injection: Detected potential command injection or dangerous shell execution.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in run_tool",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug10_eval_user_input.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 12.699,
+   "trust_score": 55,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "PARTIAL_FAILURE",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 777,
+   "output_tokens": 1634,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B307 (blacklist): Use of possibly insecure function - consider using safer ast.literal_eval.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-dangerous-eval: Detected use of dynamic code evaluation (eval or exec).",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "LOW",
+     "status": "ERROR",
+     "title": "Generated tests could not be collected for calculate",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug11_pickle_untrusted.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 10.645,
+   "trust_score": 67,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 843,
+   "output_tokens": 1768,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B403 (blacklist): Consider possible security implications associated with pickle module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "MEDIUM",
+     "status": "",
+     "title": "[BANDIT] B301 (blacklist): Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possib",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "HIGH",
+     "status": "",
+     "title": "[SEMGREP] python-insecure-deserialization: Insecure deserialization using pickle or unsafe YAML loader.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_session",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "bug12_hardcoded_password.py",
+   "kind": "bug",
+   "category": "security",
+   "expected_agent": "Security-Guard",
+   "seconds": 10.311,
+   "trust_score": 77,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 767,
+   "output_tokens": 1498,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B105 (hardcoded_password_string): Possible hardcoded password: 'Pr0d-hunter2-secret'",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for connect_info",
+     "assertion_error": false
+    },
+    {
+     "agent": "Leak-Hunter",
+     "severity": "HIGH",
+     "status": "OPEN",
+     "title": "[GITLEAKS] generic-api-key in bug12_hardcoded_password.py",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean01_path_join.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.367,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 462,
+   "output_tokens": 1070,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in join",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean02_json_parse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.93,
+   "trust_score": 80,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 463,
+   "output_tokens": 918,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean03_hypotenuse.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.844,
+   "trust_score": 95,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 501,
+   "output_tokens": 989,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for hypotenuse",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean04_slugify.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.022,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 498,
+   "output_tokens": 886,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in slugify",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean05_mean.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.207,
+   "trust_score": 95,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 484,
+   "output_tokens": 941,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for mean",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean06_celsius.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 7.788,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 489,
+   "output_tokens": 714,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for celsius_to_fahrenheit",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean07_safe_run.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 11.811,
+   "trust_score": 0,
+   "recommendation": "BLOCK",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 3,
+   "llm_failed": 0,
+   "input_tokens": 1060,
+   "output_tokens": 2137,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B404 (blacklist): Consider possible security implications associated with the subprocess module.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B607 (start_process_with_partial_path): Starting a process with a partial executable path",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "LOW",
+     "status": "",
+     "title": "[BANDIT] B603 (subprocess_without_shell_equals_true): subprocess call - check for execution of untrusted input.",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in git_branch",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean08_sha256.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.073,
+   "trust_score": 75,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 473,
+   "output_tokens": 1004,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in file_digest",
+     "assertion_error": true
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean09_parse_int.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.881,
+   "trust_score": 70,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 522,
+   "output_tokens": 836,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in parse_port",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean10_chunks.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.84,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 511,
+   "output_tokens": 911,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for chunks",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean11_dedupe.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.016,
+   "trust_score": 65,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 521,
+   "output_tokens": 881,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in dedupe_keep_order",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean12_clamp.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.547,
+   "trust_score": 65,
+   "recommendation": "REQUEST_CHANGES",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 502,
+   "output_tokens": 925,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "HIGH",
+     "status": "FAIL",
+     "title": "Specification Violation in clamp",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean13_read_json.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.456,
+   "trust_score": 90,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 541,
+   "output_tokens": 1042,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for load_settings",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean14_word_count.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 8.777,
+   "trust_score": 85,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 741,
+   "output_tokens": 969,
+   "findings": [
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Cannot inspect signature",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "VALID",
+     "title": "Valid API Usage",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Fact-Checker",
+     "severity": "INFO",
+     "status": "UNRESOLVED",
+     "title": "Unresolved Dynamic Call",
+     "assertion_error": false
+    },
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for word_counts",
+     "assertion_error": false
+    }
+   ]
+  },
+  {
+   "repeat": 3,
+   "file": "clean15_days_between.py",
+   "kind": "clean",
+   "category": "control",
+   "expected_agent": null,
+   "seconds": 9.194,
+   "trust_score": 100,
+   "recommendation": "APPROVE",
+   "agent_statuses": {
+    "Fact-Checker": "OK",
+    "Blind-Tester": "OK",
+    "Security-Guard": "OK",
+    "Leak-Hunter": "OK",
+    "Purana-Saman": "OK",
+    "Jhooti-Docstring": "OK",
+    "Synthesizer": "OK"
+   },
+   "llm_calls": 2,
+   "llm_failed": 0,
+   "input_tokens": 500,
+   "output_tokens": 1362,
+   "findings": [
+    {
+     "agent": "Security-Guard",
+     "severity": "INFO",
+     "status": "",
+     "title": "Clean Security Scan",
+     "assertion_error": false
+    },
+    {
+     "agent": "Blind-Tester",
+     "severity": "INFO",
+     "status": "PASS",
+     "title": "All Blind Specification Tests Passed for days_between",
+     "assertion_error": false
+    }
+   ]
+  }
+ ]
+}

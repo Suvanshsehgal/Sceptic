@@ -1,0 +1,666 @@
+{
+  "mode": "deterministic",
+  "started_at": "2026-11-18T18:34:01.425166+00:00",
+  "cases": 27,
+  "repeats": 1,
+  "audits": 27,
+  "wall_seconds": {
+    "total": 130.85,
+    "p50": 4.797,
+    "p95": 4.954,
+    "mean": 4.846,
+    "max": 6.046
+  },
+  "agents": {
+    "Leak-Hunter": {
+      "calls": 27,
+      "errors": 0,
+      "mean_seconds": 0.5459,
+      "p95_seconds": 0.562
+    },
+    "Purana-Saman": {
+      "calls": 27,
+      "errors": 0,
+      "mean_seconds": 0.547,
+      "p95_seconds": 0.5638
+    },
+    "Jhooti-Docstring": {
+      "calls": 27,
+      "errors": 0,
+      "mean_seconds": 0.5462,
+      "p95_seconds": 0.5626
+    },
+    "Fact-Checker": {
+      "calls": 27,
+      "errors": 0,
+      "mean_seconds": 0.0047,
+      "p95_seconds": 0.008
+    },
+    "Security-Guard": {
+      "calls": 27,
+      "errors": 0,
+      "mean_seconds": 4.1181,
+      "p95_seconds": 4.2083
+    },
+    "Blind-Tester": {
+      "calls": 27,
+      "errors": 27,
+      "mean_seconds": 0.1718,
+      "p95_seconds": 0.1805
+    }
+  },
+  "agents_unavailable_in_this_run": [
+    "Blind-Tester"
+  ],
+  "llm": {
+    "calls_total": 0,
+    "failed_total": 0,
+    "calls_per_audit": 0.0,
+    "input_tokens_total": 0,
+    "output_tokens_total": 0,
+    "input_tokens_per_audit": 0.0,
+    "output_tokens_per_audit": 0.0
+  },
+  "cost": {
+    "price_input_per_million_usd": null,
+    "price_output_per_million_usd": null,
+    "cost_per_audit_usd": null,
+    "cost_per_1000_audits_usd": null
+  },
+  "audits_detail": [
+    {
+      "file": "bug01_hallucinated_os_path.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 6.0462,
+      "trust_score": 75,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 1.8096,
+        "Purana-Saman": 1.8111,
+        "Jhooti-Docstring": 1.8101,
+        "Fact-Checker": 0.0039,
+        "Security-Guard": 4.0497,
+        "Blind-Tester": 0.1769
+      }
+    },
+    {
+      "file": "bug02_hallucinated_json.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.769,
+      "trust_score": 75,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.517,
+        "Purana-Saman": 0.5192,
+        "Jhooti-Docstring": 0.5184,
+        "Fact-Checker": 0.0043,
+        "Security-Guard": 4.0675,
+        "Blind-Tester": 0.1737
+      }
+    },
+    {
+      "file": "bug03_hallucinated_math.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7452,
+      "trust_score": 75,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4686,
+        "Purana-Saman": 0.4707,
+        "Jhooti-Docstring": 0.4699,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.0995,
+        "Blind-Tester": 0.1668
+      }
+    },
+    {
+      "file": "bug04_hallucinated_re.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7726,
+      "trust_score": 75,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4456,
+        "Purana-Saman": 0.4476,
+        "Jhooti-Docstring": 0.4469,
+        "Fact-Checker": 0.0039,
+        "Security-Guard": 4.1467,
+        "Blind-Tester": 0.1705
+      }
+    },
+    {
+      "file": "bug05_spec_add_returns_product.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.86,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5254,
+        "Purana-Saman": 0.5249,
+        "Jhooti-Docstring": 0.5239,
+        "Fact-Checker": 0.0038,
+        "Security-Guard": 4.1507,
+        "Blind-Tester": 0.1765
+      }
+    },
+    {
+      "file": "bug06_spec_larger_returns_smaller.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7127,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4723,
+        "Purana-Saman": 0.4742,
+        "Jhooti-Docstring": 0.4732,
+        "Fact-Checker": 0.0037,
+        "Security-Guard": 4.0623,
+        "Blind-Tester": 0.1681
+      }
+    },
+    {
+      "file": "bug07_spec_ratio_floor_division.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7967,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5085,
+        "Purana-Saman": 0.5097,
+        "Jhooti-Docstring": 0.5089,
+        "Fact-Checker": 0.0033,
+        "Security-Guard": 4.1072,
+        "Blind-Tester": 0.1723
+      }
+    },
+    {
+      "file": "bug08_command_injection_os_system.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.8565,
+      "trust_score": 55,
+      "recommendation": "BLOCK",
+      "findings": 5,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4646,
+        "Purana-Saman": 0.4642,
+        "Jhooti-Docstring": 0.4635,
+        "Fact-Checker": 0.0048,
+        "Security-Guard": 4.2083,
+        "Blind-Tester": 0.1744
+      }
+    },
+    {
+      "file": "bug09_subprocess_shell_true.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.8696,
+      "trust_score": 52,
+      "recommendation": "BLOCK",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5428,
+        "Purana-Saman": 0.5445,
+        "Jhooti-Docstring": 0.5433,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.1399,
+        "Blind-Tester": 0.1761
+      }
+    },
+    {
+      "file": "bug10_eval_user_input.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.8498,
+      "trust_score": 65,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 5,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.516,
+        "Purana-Saman": 0.5173,
+        "Jhooti-Docstring": 0.5165,
+        "Fact-Checker": 0.0038,
+        "Security-Guard": 4.1516,
+        "Blind-Tester": 0.1724
+      }
+    },
+    {
+      "file": "bug11_pickle_untrusted.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7467,
+      "trust_score": 62,
+      "recommendation": "BLOCK",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4679,
+        "Purana-Saman": 0.4695,
+        "Jhooti-Docstring": 0.4686,
+        "Fact-Checker": 0.0043,
+        "Security-Guard": 4.1013,
+        "Blind-Tester": 0.1674
+      }
+    },
+    {
+      "file": "bug12_hardcoded_password.py",
+      "kind": "bug",
+      "repeat": 0,
+      "wall_seconds": 4.7906,
+      "trust_score": 72,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5101,
+        "Purana-Saman": 0.5115,
+        "Jhooti-Docstring": 0.5108,
+        "Fact-Checker": 0.0038,
+        "Security-Guard": 4.0903,
+        "Blind-Tester": 0.1805
+      }
+    },
+    {
+      "file": "clean01_path_join.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.814,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4835,
+        "Purana-Saman": 0.4874,
+        "Jhooti-Docstring": 0.4861,
+        "Fact-Checker": 0.008,
+        "Security-Guard": 4.1403,
+        "Blind-Tester": 0.1735
+      }
+    },
+    {
+      "file": "clean02_json_parse.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7307,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.475,
+        "Purana-Saman": 0.4744,
+        "Jhooti-Docstring": 0.4734,
+        "Fact-Checker": 0.0045,
+        "Security-Guard": 4.08,
+        "Blind-Tester": 0.1675
+      }
+    },
+    {
+      "file": "clean03_hypotenuse.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7659,
+      "trust_score": 90,
+      "recommendation": "APPROVE",
+      "findings": 4,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4603,
+        "Purana-Saman": 0.4595,
+        "Jhooti-Docstring": 0.4587,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.1284,
+        "Blind-Tester": 0.1693
+      }
+    },
+    {
+      "file": "clean04_slugify.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.8125,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4666,
+        "Purana-Saman": 0.4661,
+        "Jhooti-Docstring": 0.4654,
+        "Fact-Checker": 0.0073,
+        "Security-Guard": 4.1632,
+        "Blind-Tester": 0.1716
+      }
+    },
+    {
+      "file": "clean05_mean.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.8529,
+      "trust_score": 90,
+      "recommendation": "APPROVE",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5512,
+        "Purana-Saman": 0.5527,
+        "Jhooti-Docstring": 0.5519,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.1273,
+        "Blind-Tester": 0.1647
+      }
+    },
+    {
+      "file": "clean06_celsius.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7229,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.535,
+        "Purana-Saman": 0.5366,
+        "Jhooti-Docstring": 0.5356,
+        "Fact-Checker": 0.0034,
+        "Security-Guard": 4.0109,
+        "Blind-Tester": 0.1678
+      }
+    },
+    {
+      "file": "clean07_safe_run.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.9474,
+      "trust_score": 81,
+      "recommendation": "REQUEST_CHANGES",
+      "findings": 7,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5286,
+        "Purana-Saman": 0.5299,
+        "Jhooti-Docstring": 0.5289,
+        "Fact-Checker": 0.0078,
+        "Security-Guard": 4.2233,
+        "Blind-Tester": 0.1818
+      }
+    },
+    {
+      "file": "clean08_sha256.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.8233,
+      "trust_score": 90,
+      "recommendation": "APPROVE",
+      "findings": 5,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4862,
+        "Purana-Saman": 0.488,
+        "Jhooti-Docstring": 0.4872,
+        "Fact-Checker": 0.0046,
+        "Security-Guard": 4.1499,
+        "Blind-Tester": 0.1759
+      }
+    },
+    {
+      "file": "clean09_parse_int.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7184,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 5,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4953,
+        "Purana-Saman": 0.4968,
+        "Jhooti-Docstring": 0.496,
+        "Fact-Checker": 0.0041,
+        "Security-Guard": 4.0433,
+        "Blind-Tester": 0.1695
+      }
+    },
+    {
+      "file": "clean10_chunks.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.8195,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5329,
+        "Purana-Saman": 0.5335,
+        "Jhooti-Docstring": 0.5339,
+        "Fact-Checker": 0.0047,
+        "Security-Guard": 4.1001,
+        "Blind-Tester": 0.1747
+      }
+    },
+    {
+      "file": "clean11_dedupe.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.9542,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.562,
+        "Purana-Saman": 0.5638,
+        "Jhooti-Docstring": 0.5626,
+        "Fact-Checker": 0.0083,
+        "Security-Guard": 4.2064,
+        "Blind-Tester": 0.1712
+      }
+    },
+    {
+      "file": "clean12_clamp.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7737,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 6,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4649,
+        "Purana-Saman": 0.4644,
+        "Jhooti-Docstring": 0.4632,
+        "Fact-Checker": 0.0044,
+        "Security-Guard": 4.1309,
+        "Blind-Tester": 0.1696
+      }
+    },
+    {
+      "file": "clean13_read_json.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.6922,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 8,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4519,
+        "Purana-Saman": 0.4534,
+        "Jhooti-Docstring": 0.4525,
+        "Fact-Checker": 0.0044,
+        "Security-Guard": 4.0589,
+        "Blind-Tester": 0.1714
+      }
+    },
+    {
+      "file": "clean14_word_count.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.7422,
+      "trust_score": 85,
+      "recommendation": "APPROVE",
+      "findings": 7,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.4681,
+        "Purana-Saman": 0.4696,
+        "Jhooti-Docstring": 0.469,
+        "Fact-Checker": 0.0064,
+        "Security-Guard": 4.0977,
+        "Blind-Tester": 0.1642
+      }
+    },
+    {
+      "file": "clean15_days_between.py",
+      "kind": "clean",
+      "repeat": 0,
+      "wall_seconds": 4.862,
+      "trust_score": 95,
+      "recommendation": "APPROVE",
+      "findings": 3,
+      "incomplete": 0,
+      "llm_calls": 0,
+      "llm_failed_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "agent_seconds": {
+        "Leak-Hunter": 0.5278,
+        "Purana-Saman": 0.5297,
+        "Jhooti-Docstring": 0.5285,
+        "Fact-Checker": 0.0038,
+        "Security-Guard": 4.1534,
+        "Blind-Tester": 0.1704
+      }
+    }
+  ]
+}
