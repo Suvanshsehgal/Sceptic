@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import asyncio
@@ -51,6 +52,11 @@ from feature_scoper import evaluate_feature_proposal
 from watchdog import PipelineWatchdog
 from gatekeeper import DeploymentGatekeeper
 from rollback_agent import RollbackAgent
+import a2a_subset as a2a  # in-house A2A subset (the official SDK is used by a2a_interop)
+import a2a_interop
+import adk_agents
+import reports
+from pydantic import BaseModel, Field
 
 try:
     from celery_app import execute_audit_pipeline
@@ -59,6 +65,12 @@ except ImportError:
 
 logger = logging.getLogger("sceptic.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+
+def _guard_text(text, kind, source):
+    """Input guardrail for user text that reaches an LLM. Imported lazily so the API starts without the worker path."""
+    import guardrails  # worker_dir is already on sys.path (see the imports at the top of this module)
+    return guardrails.check_and_log(text, kind, source)
 
 
 def is_production() -> bool:
@@ -92,13 +104,17 @@ app = FastAPI(
 )
 
 # Enable CORS for web frontend
+_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Phase D: the CrewAI Rollback Advisor, served over the official A2A protocol (a2a-sdk) at /a2a-interop/advisor.
+app.mount(a2a_interop.ADVISOR_PATH, a2a_interop.build_advisor_app())
 
 # Temporary in-memory state store for CSRF validation during OAuth flow
 oauth_states = {}
@@ -509,6 +525,7 @@ async def create_cli_audit(
         pull_request_id=pr.id,
         commit_sha=payload.commit_sha or "cli-head",
         status="COMPLETED",
+        trace_id=payload.trace_id,
         trust_score=payload.trust_score,
         summary=payload.summary or f"CLI verification completed with trust score {payload.trust_score:.1f}%",
         recommendation=payload.recommendation or "APPROVE",
@@ -541,7 +558,7 @@ async def create_cli_audit(
             audit_run_id=audit_run.id,
             agent_name=agent_name,
             severity=sev,
-            status="OPEN",
+            status=str(f.get("status") or "OPEN")[:50],
             title=str(title)[:500],
             description=desc,
             file_path=str(fp)[:1000] if fp else None,
@@ -592,6 +609,9 @@ async def create_feature_analysis(
         raise HTTPException(status_code=404, detail="Project not found")
 
     desc = analysis_in.feature_description
+    verdict = _guard_text(desc, "feature", "feature.analysis")
+    if not verdict.allowed:
+        raise HTTPException(status_code=400, detail="Feature description rejected by input guardrail: " + "; ".join(verdict.reasons))
 
     # Dynamic evaluation using Groq LLM (openai/gpt-oss-120b) or semantic fallback
     eval_result = await evaluate_feature_proposal(
@@ -1443,3 +1463,179 @@ async def check_deployment_rollback_safety(
         allow_unsafe_migration=payload.allow_unsafe_migration
     )
 
+
+
+# ========================================================
+# PHASE 3: A2A agents (Watchdog -> Rollback)
+# ========================================================
+def _a2a_error(request_id, code: int, message: str, status_code: int = 400) -> JSONResponse:
+    return JSONResponse(
+        {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}},
+        status_code=status_code,
+    )
+
+
+@app.get("/a2a/watchdog/.well-known/agent.json")
+async def a2a_watchdog_card():
+    """Public agent card for the Watchdog agent."""
+    return a2a.agent_card("watchdog")
+
+
+@app.get("/a2a/rollback/.well-known/agent.json")
+async def a2a_rollback_card():
+    """Public agent card for the Rollback agent."""
+    return a2a.agent_card("rollback")
+
+
+@app.post("/a2a/rollback")
+async def a2a_rollback(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    A2A message/send to the Rollback agent. Payload: {deployment_id, reason, trigger_source}.
+    The rollback still goes through the five pre-flight safety checks; nothing is skipped for A2A callers.
+    """
+    try:
+        body = await request.json()
+    except ValueError:
+        return _a2a_error(None, -32700, "invalid JSON", 400)
+    request_id = body.get("id") if isinstance(body, dict) else None
+    try:
+        data = a2a.read_request(body)
+        deployment_id = UUID(str(data.get("deployment_id")))
+    except (a2a.A2AError, ValueError) as exc:
+        return _a2a_error(request_id, -32602, str(exc))
+
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    result = await RollbackAgent().evaluate_and_execute(
+        deployment=deployment,
+        reason=str(data.get("reason", "")),
+        trigger_source=str(data.get("trigger_source", "WATCHDOG")),
+        db=db,
+    )
+    return a2a.make_response(request_id, {"rollback": result.model_dump(mode="json")})
+
+
+@app.post("/deployments/{deployment_id}/triage")
+async def triage_deployment(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Phase D triage: runs the Watchdog probe, sends it to the CrewAI Rollback Advisor over A2A, and returns the
+    deterministic summary with the advice. Nothing is rolled back here: rollback_executed is always false.
+    """
+    await _get_authorized_deployment(deployment_id, current_user.id, db)
+    probe = await adk_agents.probe_runtime()
+    result = await a2a_interop.triage(probe)
+    result["summary"] = adk_agents.deterministic_summary(probe)
+    return result
+
+
+@app.post("/a2a/watchdog")
+async def a2a_watchdog(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    A2A message/send to the Watchdog agent. Payload: {deployment_id}.
+    Runs the runtime check. On FAIL, it sends an A2A message to the Rollback agent using the same bearer token.
+    """
+    try:
+        body = await request.json()
+    except ValueError:
+        return _a2a_error(None, -32700, "invalid JSON", 400)
+    request_id = body.get("id") if isinstance(body, dict) else None
+    try:
+        data = a2a.read_request(body)
+        deployment_id = UUID(str(data.get("deployment_id")))
+    except (a2a.A2AError, ValueError) as exc:
+        return _a2a_error(request_id, -32602, str(exc))
+
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    watch = await PipelineWatchdog().evaluate(deployment, db)
+    rollback_reply = None
+    if watch.status == schemas.VerificationStatus.FAIL:
+        # Automatic rollback is opt-in. The Watchdog probes one shared target, so a failure there says nothing
+        # specific about this deployment. Without the opt-in, a person must start the rollback.
+        if os.getenv("SCEPTIC_A2A_AUTO_ROLLBACK", "false").strip().lower() == "true":
+            try:
+                rollback_reply = await a2a.send_message(
+                    f"{a2a.SELF_BASE_URL}/a2a/rollback",
+                    {
+                        "deployment_id": str(deployment.id),
+                        "reason": f"Watchdog FAIL: {watch.summary}",
+                        "trigger_source": "WATCHDOG",
+                    },
+                    request.headers.get("authorization"),
+                )
+            except a2a.A2AError as exc:
+                rollback_reply = {"error": str(exc)}
+        else:
+            rollback_reply = {
+                "status": "APPROVAL_REQUIRED",
+                "reason": "Automatic rollback is disabled. Set SCEPTIC_A2A_AUTO_ROLLBACK=true, or call POST /deployments/{id}/rollback.",
+            }
+    return a2a.make_response(
+        request_id,
+        {"watchdog": watch.model_dump(mode="json"), "rollback": rollback_reply},
+    )
+
+
+# ========================================================
+# PHASE 4: Markdown incident reports and LLM Q&A
+# ========================================================
+class ReportAskRequest(BaseModel):
+    source: str = Field(..., min_length=1, max_length=100)
+    question: str = Field(..., min_length=3, max_length=500)
+
+
+_DEPLOYMENT_REPORT_RE = re.compile(
+    r"^deployment-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-\d{8}T\d{6}\.md$"
+)
+
+
+@app.post("/deployments/{deployment_id}/report")
+async def create_deployment_report(
+    deployment_id: UUID,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Run the Watchdog narrator and save a Markdown incident report under reports/.
+    The probe checks the configured TARGET_SERVICE_URL, the same as the Watchdog endpoint.
+    """
+    deployment = await _get_authorized_deployment(deployment_id, current_user.id, db)
+    result = await adk_agents.run_watchdog_agent()
+    markdown = reports.render_incident_report(
+        deployment_label=f"{deployment.environment} {deployment.commit_sha[:12]}",
+        probe=result["probe"],
+        summary=result["summary"],
+        llm_used=result["llm_used"],
+    )
+    name = f"deployment-{deployment.id}-{datetime.now(timezone.utc):%Y%m%dT%H%M%S}.md"
+    reports.write_incident_report(name, markdown)
+    return {"report_name": name, "llm_used": result["llm_used"], "markdown": markdown}
+
+
+@app.post("/reports/ask")
+async def ask_report(
+    payload: ReportAskRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Answer a question from one runbook or report. A deployment report is readable only by a user who can
+    access that deployment.
+    """
+    match = _DEPLOYMENT_REPORT_RE.match(payload.source)
+    if match:
+        await _get_authorized_deployment(UUID(match.group(1)), current_user.id, db)
+    verdict = _guard_text(payload.question, "question", "reports.ask")
+    if not verdict.allowed:
+        raise HTTPException(status_code=400, detail="Question rejected by input guardrail: " + "; ".join(verdict.reasons))
+    return await adk_agents.answer_from_source(payload.source, payload.question)
