@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from llm_client import make_groq_client, llm_blocked, note_llm_error
+import guardrails
 
 logger = logging.getLogger("sceptic.docstring_judge")
 
@@ -57,6 +58,21 @@ def judge_docstrings(source_code: str, file_path: str, api_key: Optional[str] = 
         return [_skipped("GROQ_API_KEY is not set, so docstrings were not checked.")]
     if llm_blocked():
         return [_skipped("The daily Groq quota is reached, so docstrings were not checked.")]
+
+    # Docstrings are untrusted text from the audited code. If one fails the guard, nothing is sent to the model.
+    for match in re.finditer(r'"""(.*?)"""|\'\'\'(.*?)\'\'\'', source_code, re.S):
+        text = match.group(1) if match.group(1) is not None else match.group(2)
+        verdict = guardrails.check_and_log(text, "docstring", "Jhooti-Docstring")
+        if not verdict.allowed:
+            return [{
+                "agent_name": "Jhooti-Docstring",
+                "severity": "INFO",
+                "status": "UNRESOLVED",
+                "title": "Jhooti-Docstring skipped: input guardrail",
+                "description": "A docstring was not sent to the model: " + "; ".join(verdict.reasons) + ".",
+                "file_path": file_path,
+                "line_number": None,
+            }]
 
     try:
         client = make_groq_client(key)
