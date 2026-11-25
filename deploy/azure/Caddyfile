@@ -1,0 +1,30 @@
+# {$SCEPTIC_DOMAIN} is the VM's public name, for example sceptic-yourname.centralindia.cloudapp.azure.com.
+# Caddy obtains and renews a free HTTPS certificate for it automatically (ports 80 and 443 must be reachable).
+{$SCEPTIC_DOMAIN} {
+	encode gzip
+
+	# The portal calls /api/...; the prefix is removed before the request reaches the backend.
+	handle_path /api/* {
+		reverse_proxy backend:8000 {
+			# Server-sent events (live audit progress) must not be buffered.
+			flush_interval -1
+		}
+	}
+
+	# The service worker must always be revalidated, or an update would never be noticed.
+	@sw path /sw.js
+	header @sw Cache-Control "no-cache"
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

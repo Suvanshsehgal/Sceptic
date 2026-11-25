@@ -1,0 +1,162 @@
+# Sceptic on one Azure VM. Run from the repository root:
+#   docker compose --env-file deploy/azure/.env -f deploy/azure/docker-compose.azure.yml up -d --build
+#
+# Only Caddy publishes ports (80 and 443). Postgres, Redis, the backend and Prometheus stay on the internal network.
+# Grafana is bound to 127.0.0.1, so reach it through an SSH tunnel: ssh -L 3000:localhost:3000 azureuser@<vm>.
+
+x-common-env: &common-env
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql://sceptic:${POSTGRES_PASSWORD}@postgres:5432/sceptic
+  REDIS_URL: redis://redis:6379/0
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+  GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+  ALLOW_MOCK_LOGIN: "false"
+  LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+  LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+  LANGFUSE_HOST: ${LANGFUSE_HOST:-}
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: sceptic
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sceptic
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sceptic -d sceptic"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: always
+    environment:
+      <<: *common-env
+      TARGET_SERVICE_URL: http://target-service:8080
+      PROMETHEUS_URL: http://prometheus:9090
+      SCEPTIC_SELF_URL: https://${SCEPTIC_DOMAIN}
+      CORS_ORIGINS: https://${SCEPTIC_DOMAIN}
+      ROLLBACK_COMMAND: ${ROLLBACK_COMMAND:-}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+    restart: always
+    environment:
+      <<: *common-env
+      SCEPTIC_SANDBOX: docker
+      # The sandbox container is started through the host's Docker engine, so the folder that holds the code under
+      # test must exist at the SAME path on the host and inside this container.
+      SCEPTIC_SANDBOX_WORKDIR: /var/lib/sceptic/work
+    # The worker talks to the host's Docker engine to start the locked-down sandbox containers. This is powerful:
+    # anyone who can run code in the worker can control Docker on the VM. Keep the worker's inputs trusted.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /var/lib/sceptic/work:/var/lib/sceptic/work
+    group_add:
+      - "${DOCKER_GID}"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  target-service:
+    build:
+      context: ../../target_service
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      APPLICATION_VERSION: ${APPLICATION_VERSION:-1.0.0}
+      COMMIT_SHA: ${COMMIT_SHA:-azure-release}
+      BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-2026-11-24T00:00:00Z}
+      ENVIRONMENT: production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    depends_on:
+      target-service: {condition: service_healthy}
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ../../infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../../infra/grafana/dashboards/definitions:/etc/grafana/provisioning/dashboards/definitions:ro
+      - ../../infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/azure/web.Dockerfile
+    restart: always
+    environment:
+      SCEPTIC_DOMAIN: ${SCEPTIC_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend: {condition: service_healthy}
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  caddy_data:
+  caddy_config:
