@@ -259,3 +259,109 @@ export const tableClasses = {
   td: 'px-5 py-3 align-middle text-ink',
   mono: 'font-mono text-[13px] text-ink-muted tabular',
 };
+
+/* ---------- Terminal-style presentation (mirrors the Sceptic CLI in cli/theme.py) ---------- */
+
+/* An uppercase accent heading over a rule, like the CLI's section headers. */
+export function SectionTitle({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-2.5">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">{children}</h3>
+      {aside && <div className="font-mono text-[11px] text-ink-subtle">{aside}</div>}
+    </div>
+  );
+}
+
+export type SymbolState = 'ok' | 'fail' | 'warn' | 'info';
+
+const SYMBOL_STATE: Record<SymbolState, { symbol: string; word: string; tone: Tone }> = {
+  ok: { symbol: '✔', word: 'OK', tone: 'success' },
+  fail: { symbol: '✖', word: 'FAIL', tone: 'danger' },
+  warn: { symbol: '▲', word: 'PARTIAL', tone: 'warning' },
+  info: { symbol: '•', word: 'INFO', tone: 'info' },
+};
+
+/* A status as a symbol and a word, the same pair the CLI prints. Color is never the only signal. */
+export function SymbolStatus({ state, word }: { state: SymbolState; word?: string }) {
+  const entry = SYMBOL_STATE[state];
+  return (
+    <Badge tone={entry.tone} icon={<span aria-hidden className="font-mono text-[12px]">{entry.symbol}</span>}>
+      {word ?? entry.word}
+    </Badge>
+  );
+}
+
+export const SEVERITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] as const;
+
+const SEVERITY_FILL: Record<string, string> = {
+  CRITICAL: 'bg-critical',
+  HIGH: 'bg-danger',
+  MEDIUM: 'bg-warning',
+  LOW: 'bg-info',
+  INFO: 'bg-ink-subtle',
+};
+
+/* The CLI's "Severity: HIGH 3, INFO 1" line, drawn as one proportional bar with counts. */
+export function SeverityBar({ counts }: { counts: Record<string, number> }) {
+  const total = SEVERITY_ORDER.reduce((sum, key) => sum + (counts[key] || 0), 0);
+  const summary = SEVERITY_ORDER.filter((key) => counts[key]).map((key) => `${key} ${counts[key]}`).join(', ');
+  return (
+    <div>
+      <div
+        className="flex h-2 w-full overflow-hidden rounded-full bg-line"
+        role="img"
+        aria-label={total ? `Severity: ${summary}` : 'No findings'}
+      >
+        {SEVERITY_ORDER.map((key) => (counts[key] ? (
+          <div key={key} className={SEVERITY_FILL[key]} style={{ width: `${(counts[key] / total) * 100}%` }} />
+        ) : null))}
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+        {SEVERITY_ORDER.map((key) => (
+          <li key={key} className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${SEVERITY_FILL[key]}`} aria-hidden />
+            <span className="text-ink-muted">{key.charAt(0) + key.slice(1).toLowerCase()}</span>
+            <span className="tabular font-mono text-ink">{counts[key] || 0}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* The CLI's verdict panel: score, verdict and summary, with a border that follows the verdict. */
+export function VerdictCard({ title, score, recommendation, summary, footer }: {
+  title: React.ReactNode;
+  score: number | null | undefined;
+  recommendation?: string | null;
+  summary?: string | null;
+  footer?: React.ReactNode;
+}) {
+  const tone: Tone = recommendation === 'APPROVE' ? 'success'
+    : recommendation === 'REQUEST_CHANGES' ? 'warning'
+      : recommendation ? 'danger' : 'neutral';
+  const border = { success: 'border-success/40', warning: 'border-warning/40', danger: 'border-danger/40', neutral: 'border-line', critical: 'border-line', info: 'border-line' }[tone];
+  const word = recommendation === 'APPROVE' ? 'APPROVE'
+    : recommendation === 'REQUEST_CHANGES' ? 'REQUEST CHANGES'
+      : recommendation ? 'BLOCK' : 'NO VERDICT';
+  return (
+    <section className={`rounded-lg border ${border} bg-surface p-6`}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">{title}</div>
+      <div className="mt-4 flex flex-wrap items-end gap-x-12 gap-y-5">
+        <div>
+          <div className="text-[13px] text-ink-muted">Trust score</div>
+          <div className={`tabular mt-1 font-mono text-[44px] font-medium leading-none ${toneText[tone]}`}>
+            {typeof score === 'number' ? score.toFixed(score % 1 ? 1 : 0) : '—'}
+            <span className="text-lg text-ink-subtle"> / 100</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[13px] text-ink-muted">Verdict</div>
+          <div className={`mt-1 font-mono text-[22px] font-semibold tracking-wide ${toneText[tone]}`}>{word}</div>
+        </div>
+      </div>
+      {summary && <p className="mt-5 max-w-3xl text-sm leading-relaxed text-ink-muted">{summary}</p>}
+      {footer && <div className="mt-4">{footer}</div>}
+    </section>
+  );
+}

@@ -52,6 +52,9 @@ export interface PullRequestSummary {
   repository: string;
   pr_number: number;
   latest_commit_sha?: string | null;
+  commit_sha?: string | null;
+  branch_name?: string | null;
+  repository_full_name?: string | null;
   title?: string | null;
   project_id?: string | null;
 }
@@ -68,6 +71,9 @@ export interface AuditRun {
   summary?: string | null;
   recommendation?: 'APPROVE' | 'REQUEST_CHANGES' | 'BLOCK' | string | null;
   idempotency_key: string;
+  trace_id?: string | null;
+  trace_url?: string | null;
+  progress?: { stage?: string; statuses?: Record<string, string>; agents?: Record<string, { status: string; findings: number }> } | null;
   findings: AgentFinding[];
   pull_request?: PullRequestSummary | null;
 }
